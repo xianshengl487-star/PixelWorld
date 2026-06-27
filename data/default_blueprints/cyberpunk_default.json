@@ -1,0 +1,71 @@
+{
+  "world_name": "霓虹深渊",
+  "world_type": "cyberpunk",
+  "tone": "mystery",
+  "start_region": "underground_slum",
+  "player_spawn": {"x": 20, "y": 20},
+  "regions": [
+    {"id": "underground_slum", "name": "地下贫民窟", "type": "slum", "safety": 40},
+    {"id": "neon_district", "name": "霓虹区", "type": "city", "safety": 60},
+    {"id": "corp_tower", "name": "企业塔", "type": "dungeon", "safety": 30},
+    {"id": "data_sewer", "name": "数据下水道", "type": "danger_zone", "safety": 20}
+  ],
+  "factions": [
+    {"id": "mega_corp", "name": "巨企", "type": "corporation", "attitude_to_player": 0},
+    {"id": "hackers", "name": "网络叛客", "type": "resistance", "attitude_to_player": 5},
+    {"id": "street_gang", "name": "街头帮派", "type": "gang", "attitude_to_player": -10}
+  ],
+  "major_npcs": [
+    {
+      "id": "fixer",
+      "name": "老周",
+      "role": "quest_giver",
+      "importance": "major",
+      "personality": ["精明", "狡黠"],
+      "goal": "从巨企的指缝里捞一笔",
+      "x": 22,
+      "y": 20,
+      "initial_dialogue": "嘿，新人。想在这个钢铁地狱里活下去，需要个中间人。我就是。"
+    },
+    {
+      "id": "hacker_girl",
+      "name": "赛姬",
+      "role": "elder",
+      "importance": "major",
+      "personality": ["叛逆", "理想主义"],
+      "goal": "揭露巨企的秘密",
+      "x": 18,
+      "y": 22,
+      "initial_dialogue": "你在找真相？欢迎来到矩阵的另一边。"
+    }
+  ],
+  "minor_npcs": [
+    {
+      "id": "street_vendor",
+      "name": "街头小贩",
+      "role": "merchant",
+      "importance": "minor",
+      "x": 24,
+      "y": 24,
+      "dialogue_profile": "什么都卖的黑市商贩。"
+    },
+    {
+      "id": "corp_guard",
+      "name": "企业保安",
+      "role": "guard",
+      "importance": "minor",
+      "x": 26,
+      "y": 22,
+      "dialogue_profile": "企业塔的保安，严格遵守命令。"
+    }
+  ],
+  "events": [
+    {"id": "data_breach", "name": "数据泄露", "description": "巨企的敏感数据被泄露到黑市。"},
+    {"id": "ai_awakening", "name": "AI觉醒", "description": "都市传闻：有一个AI获得了自我意识。"}
+  ],
+  "map_blueprint": {
+    "size": {"width": 64, "height": 64},
+    "required_areas": ["village", "forest", "mountain", "cave"],
+    "connections": [["village", "forest"], ["forest", "cave"], ["village", "mountain"]]
+  }
+}

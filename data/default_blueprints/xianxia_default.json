@@ -1,0 +1,117 @@
+{
+  "world_name": "青溪界",
+  "world_type": "xianxia",
+  "tone": "adventure",
+  "start_region": "qingxi_village",
+  "player_spawn": {"x": 20, "y": 20},
+  "regions": [
+    {"id": "qingxi_village", "name": "青溪村", "type": "village", "safety": 90},
+    {"id": "black_pine_mountain", "name": "黑松后山", "type": "danger_zone", "safety": 40},
+    {"id": "mystic_cave", "name": "秘境洞窟", "type": "dungeon", "safety": 20},
+    {"id": "cloud_sect_gate", "name": "云岚宗山门", "type": "sect", "safety": 80}
+  ],
+  "factions": [
+    {"id": "cloud_sect", "name": "云岚宗", "type": "sect", "attitude_to_player": 0},
+    {"id": "village_council", "name": "青溪村村民", "type": "civilian", "attitude_to_player": 10},
+    {"id": "demon_wolves", "name": "妖狼群", "type": "monster", "attitude_to_player": -20}
+  ],
+  "major_npcs": [
+    {
+      "id": "village_chief",
+      "name": "老村长",
+      "role": "quest_giver",
+      "importance": "major",
+      "personality": ["谨慎", "慈祥", "智慧"],
+      "goal": "保护青溪村免受妖兽威胁",
+      "x": 22,
+      "y": 18,
+      "initial_dialogue": "最近后山的妖兽越来越多，村民们都很担心。年轻人，你看起来不简单，能帮我们调查一下吗？"
+    },
+    {
+      "id": "herbalist",
+      "name": "药师婆婆",
+      "role": "elder",
+      "importance": "major",
+      "personality": ["神秘", "博学"],
+      "goal": "研究后山异动的根源",
+      "x": 24,
+      "y": 20,
+      "initial_dialogue": "后山的灵气最近紊乱了，这绝不是寻常的妖兽异动……"
+    },
+    {
+      "id": "sect_disciple",
+      "name": "云岚宗弟子",
+      "role": "guard",
+      "importance": "major",
+      "personality": ["高傲", "正直"],
+      "goal": "奉师门之命调查后山异象",
+      "x": 50,
+      "y": 12,
+      "initial_dialogue": "凡人止步，云岚宗山门不可擅入。你是来调查后山的？"
+    }
+  ],
+  "minor_npcs": [
+    {
+      "id": "villager_01",
+      "name": "村民甲",
+      "role": "villager",
+      "importance": "minor",
+      "x": 18,
+      "y": 24,
+      "dialogue_profile": "普通村民，担心后山妖兽。"
+    },
+    {
+      "id": "merchant_01",
+      "name": "行脚商人",
+      "role": "merchant",
+      "importance": "minor",
+      "x": 26,
+      "y": 25,
+      "dialogue_profile": "路过的商人，对后山的情况有所耳闻。"
+    },
+    {
+      "id": "guard_01",
+      "name": "村口守卫",
+      "role": "guard",
+      "importance": "minor",
+      "x": 24,
+      "y": 22,
+      "dialogue_profile": "负责村口警戒的守卫。"
+    },
+    {
+      "id": "wanderer_01",
+      "name": "流浪剑客",
+      "role": "wanderer",
+      "importance": "minor",
+      "x": 14,
+      "y": 20,
+      "dialogue_profile": "四处游历的剑客，见识广博。"
+    }
+  ],
+  "events": [
+    {
+      "id": "wolf_threat",
+      "name": "后山妖兽异动",
+      "description": "黑松后山最近出现了妖狼，青溪村安全受到威胁。"
+    },
+    {
+      "id": "spirit_disturbance",
+      "name": "灵气紊乱",
+      "description": "后山的天地灵气出现了异常波动，可能是某种封印松动的征兆。"
+    },
+    {
+      "id": "sect_investigation",
+      "name": "云岚宗调查",
+      "description": "云岚宗也派人来调查后山的异象，似乎在寻找什么东西。"
+    }
+  ],
+  "map_blueprint": {
+    "size": {"width": 64, "height": 64},
+    "required_areas": ["village", "forest", "mountain", "cave", "sect_gate"],
+    "connections": [
+      ["village", "forest"],
+      ["forest", "cave"],
+      ["forest", "sect_gate"]
+    ]
+  }
+}

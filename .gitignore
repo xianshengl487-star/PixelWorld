@@ -1,0 +1,16 @@
+# PixelWorld
+
+# Auto-generated .gitignore for Godot 4
+# 忽略真实 API Key 文件
+.env
+
+# Godot
+.godot/
+*.translation
+*.import
+
+# Local assistant/work memory
+.workbuddy/
+
+# Windows
+Thumbs.db

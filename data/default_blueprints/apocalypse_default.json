@@ -1,0 +1,71 @@
+{
+  "world_name": "废土纪元",
+  "world_type": "apocalypse",
+  "tone": "dark",
+  "start_region": "refuge_camp",
+  "player_spawn": {"x": 20, "y": 20},
+  "regions": [
+    {"id": "refuge_camp", "name": "幸存者营地", "type": "camp", "safety": 70},
+    {"id": "ruined_city", "name": "废墟都市", "type": "danger_zone", "safety": 30},
+    {"id": "underground_bunker", "name": "地下避难所", "type": "dungeon", "safety": 50},
+    {"id": "wasteland", "name": "荒原", "type": "danger_zone", "safety": 10}
+  ],
+  "factions": [
+    {"id": "survivors", "name": "幸存者联盟", "type": "civilian", "attitude_to_player": 10},
+    {"id": "raiders", "name": "掠夺者帮", "type": "bandit", "attitude_to_player": -30},
+    {"id": "old_world_remnant", "name": "旧世界残余势力", "type": "military", "attitude_to_player": 0}
+  ],
+  "major_npcs": [
+    {
+      "id": "camp_leader",
+      "name": "营地领袖",
+      "role": "quest_giver",
+      "importance": "major",
+      "personality": ["坚韧", "务实"],
+      "goal": "带领幸存者在这个废土中活下去",
+      "x": 22,
+      "y": 18,
+      "initial_dialogue": "又一个幸运的幸存者。这里物资短缺，想住下就得干活。"
+    },
+    {
+      "id": "tech_scavenger",
+      "name": "拾荒者",
+      "role": "elder",
+      "importance": "major",
+      "personality": ["疯狂", "天才"],
+      "goal": "找到旧世界的科技遗产",
+      "x": 18,
+      "y": 22,
+      "initial_dialogue": "你闻到了吗？废墟里还有能用的芯片……旧世界的知识就藏在那里。"
+    }
+  ],
+  "minor_npcs": [
+    {
+      "id": "refugee_01",
+      "name": "难民",
+      "role": "villager",
+      "importance": "minor",
+      "x": 18,
+      "y": 24,
+      "dialogue_profile": "普通幸存者，担心食物和水。"
+    },
+    {
+      "id": "trader_01",
+      "name": "黑市商人",
+      "role": "merchant",
+      "importance": "minor",
+      "x": 24,
+      "y": 24,
+      "dialogue_profile": "什么都敢买卖的边缘商人。"
+    }
+  ],
+  "events": [
+    {"id": "water_shortage", "name": "水源危机", "description": "营地净水设备故障，急需零件维修。"},
+    {"id": "raider_threat", "name": "掠夺者来袭", "description": "远处的掠夺者帮盯上了这个营地。"}
+  ],
+  "map_blueprint": {
+    "size": {"width": 64, "height": 64},
+    "required_areas": ["village", "forest", "mountain", "cave"],
+    "connections": [["village", "forest"], ["forest", "cave"], ["forest", "mountain"]]
+  }
+}

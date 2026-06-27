@@ -1,0 +1,253 @@
+extends CanvasLayer
+class_name GameHUD
+## GameHUD.gd — 游戏 HUD
+## 显示世界信息、日志、自由行动输入框
+
+@onready var _world_name_label: Label = $TopBar/WorldNameLabel
+@onready var _region_label: Label = $TopBar/RegionLabel
+@onready var _reputation_label: Label = $TopBar/ReputationLabel
+@onready var _hp_label: Label = $TopBar/HPLabel
+@onready var _hp_bar: ProgressBar = $TopBar/HPBar
+@onready var _stamina_label: Label = $TopBar/StaminaLabel
+@onready var _stamina_bar: ProgressBar = $TopBar/StaminaBar
+@onready var _log_panel: Panel = $LogPanel
+@onready var _log_text: RichTextLabel = $LogPanel/LogText
+@onready var _action_input: LineEdit = $BottomBar/ActionInput
+@onready var _action_button: Button = $BottomBar/SubmitButton
+@onready var _save_button: Button = $BottomBar/SaveButton
+@onready var _load_button: Button = $BottomBar/LoadButton
+@onready var _action_result: Label = $ActionResult
+@onready var _status_label: Label = $StatusLabel
+@onready var _inventory_label: Label = $InventoryLabel
+
+var _ai_client = null
+var _player = null
+
+
+func _ready() -> void:
+	_update_hud()
+	
+	# 连接自由行动输入信号
+	if _action_input:
+		_action_input.text_submitted.connect(_on_action_submitted)
+		_action_input.placeholder_text = "输入自由行动..."
+	
+	if _action_button:
+		_action_button.pressed.connect(_on_action_button_pressed)
+	if _save_button:
+		_save_button.pressed.connect(_on_save_button_pressed)
+	if _load_button:
+		_load_button.pressed.connect(_on_load_button_pressed)
+	
+	# 定时刷新日志显示
+	var timer = Timer.new()
+	timer.wait_time = 0.5
+	timer.autostart = true
+	timer.timeout.connect(func():
+		_update_log_display()
+		_update_hud()
+	)
+	add_child(timer)
+
+
+func setup(ai_client, player = null) -> void:
+	_ai_client = ai_client
+	_player = player
+	_update_hud()
+
+
+func _update_hud() -> void:
+	if _world_name_label:
+		_world_name_label.text = WorldState.world_name
+	
+	if _region_label:
+		var region = WorldState.current_region
+		if region == "":
+			region = WorldState.world_blueprint.get("start_region", "未知")
+		_region_label.text = "区域: %s" % region
+	
+	if _reputation_label:
+		var rep = WorldState.player_reputation
+		var rep_text = "声望: "
+		if rep > 10:
+			rep_text += str(rep) + " (友善)"
+		elif rep < -10:
+			rep_text += str(rep) + " (恶名)"
+		else:
+			rep_text += str(rep) + " (中立)"
+		_reputation_label.text = rep_text
+	
+	var hp = WorldState.player_health
+	var max_hp = WorldState.player_max_health
+	var stamina = WorldState.player_stamina
+	var max_stamina = WorldState.player_max_stamina
+	if _player and _player.has_method("get_stats"):
+		var s = _player.get_stats()
+		hp = s.health
+		max_hp = s.max_health
+		stamina = s.stamina
+		max_stamina = s.max_stamina
+	
+	if _hp_label:
+		_hp_label.text = "HP %d / %d" % [hp, max_hp]
+	if _hp_bar:
+		_hp_bar.max_value = max(1, max_hp)
+		_hp_bar.value = clampi(hp, 0, max_hp)
+	if _stamina_label:
+		_stamina_label.text = "体力 %d / %d" % [stamina, max_stamina]
+	if _stamina_bar:
+		_stamina_bar.max_value = max(1, max_stamina)
+		_stamina_bar.value = clampi(stamina, 0, max_stamina)
+	if _inventory_label:
+		_inventory_label.text = _inventory_text()
+
+
+## 处理自由行动提交
+func _on_action_submitted(text: String) -> void:
+	_handle_free_action(text)
+
+
+func _on_action_button_pressed() -> void:
+	if _action_input:
+		_handle_free_action(_action_input.text)
+
+
+func _on_save_button_pressed() -> void:
+	var save_manager = _get_save_manager()
+	if save_manager and save_manager.save_game():
+		_set_action_result("游戏已保存。")
+	else:
+		_set_action_result("保存失败。")
+
+
+func _on_load_button_pressed() -> void:
+	var save_manager = _get_save_manager()
+	if save_manager == null:
+		_set_action_result("读取失败。")
+		return
+	var result = save_manager.load_game()
+	if result.get("ok", false):
+		var game_world = get_tree().get_first_node_in_group("game_world")
+		if game_world and game_world.has_method("apply_loaded_state"):
+			game_world.apply_loaded_state()
+		_set_action_result("游戏已读取。")
+	else:
+		_set_action_result("没有可读取的存档。")
+
+
+func _handle_free_action(text: String) -> void:
+	text = text.strip_edges()
+	if text == "":
+		return
+	
+	# 清空输入框
+	if _action_input:
+		_action_input.text = ""
+		_action_input.release_focus()
+	
+	# 显示处理中
+	if _action_result:
+		_action_result.text = "正在处理..."
+	
+	GameLog.add_entry("[行动] %s" % text)
+	
+	if _ai_client == null:
+		_ai_client = preload("res://scripts/ai/AIClient.gd").new()
+	
+	# 构建上下文
+	var context = {
+		"player_input": text,
+		"player_reputation": WorldState.player_reputation,
+		"player_position": {"x": WorldState.player_position.x, "y": WorldState.player_position.y},
+		"current_region": WorldState.world_blueprint.get("start_region", ""),
+		"world_type": WorldState.world_type,
+		"world_name": WorldState.world_name,
+		"action_history": WorldState.action_history.slice(-5),
+		"active_events": WorldState.get_active_events()
+	}
+	
+	# 调用 AI
+	call_deferred("_interpret_action", context)
+
+
+func _interpret_action(context: Dictionary) -> void:
+	var result = await _ai_client.interpret_player_action(context)
+	
+	var narrative = result.get("narrative_result", result.get("interpretation", "无事发生。"))
+	var world_changes = result.get("world_changes", [])
+	
+	# 应用世界变化
+	for change in world_changes:
+		var change_type = change.get("type", "")
+		var target = change.get("target", "")
+		var delta = change.get("delta", 0)
+		
+		match change_type:
+			"reputation":
+				WorldState.player_reputation += delta
+			"faction":
+				WorldState.modify_faction_attitude(target, delta)
+			"event":
+				WorldState.set_event_progress(target, delta)
+	
+	# 记录到行动历史
+	WorldState.log_action(context.player_input, result)
+	
+	# 更新显示
+	if _action_result:
+		_action_result.text = narrative
+	
+	_update_hud()
+	
+	# 3 秒后清除结果
+	var timer = Timer.new()
+	timer.one_shot = true
+	timer.wait_time = 4.0
+	timer.timeout.connect(func():
+		if _action_result:
+			_action_result.text = ""
+		timer.queue_free()
+	)
+	add_child(timer)
+	timer.start()
+
+
+## 更新日志显示
+func _update_log_display() -> void:
+	if _log_text:
+		_log_text.text = GameLog.get_log_text(6)
+
+
+func _set_action_result(text: String) -> void:
+	if _action_result:
+		_action_result.text = text
+
+
+func _inventory_text() -> String:
+	var items = WorldState.get_inventory_items()
+	if items.is_empty():
+		return "背包: 空"
+	var parts: Array = []
+	for id in items.keys():
+		var label = id.capitalize()
+		match id:
+			"herb":
+				label = "Herb"
+			"coin":
+				label = "Coin"
+			"potion":
+				label = "Potion"
+			"wood":
+				label = "Wood"
+			"stone":
+				label = "Stone"
+			"sword":
+				label = "Sword"
+		parts.append("%s x%d" % [label, int(items[id])])
+	return "背包: " + ", ".join(parts)
+
+
+func _get_save_manager():
+	if get_tree() == null:
+		return null
+	return get_tree().root.get_node_or_null("SaveManager")

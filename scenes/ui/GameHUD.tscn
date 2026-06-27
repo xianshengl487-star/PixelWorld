@@ -1,0 +1,144 @@
+[gd_scene load_steps=2 format=3 uid="uid://game_hud"]
+
+[ext_resource type="Script" path="res://scripts/ui/GameHUD.gd" id="1_script"]
+
+[node name="GameHUD" type="CanvasLayer"]
+script = ExtResource("1_script")
+
+[node name="TopBar" type="HBoxContainer" parent="."]
+layout_mode = 0
+offset_right = 1280.0
+offset_bottom = 36.0
+
+[node name="WorldNameLabel" type="Label" parent="TopBar"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "世界名称"
+
+[node name="RegionLabel" type="Label" parent="TopBar"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "区域: --"
+
+[node name="ReputationLabel" type="Label" parent="TopBar"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "声望: 0 (中立)"
+
+[node name="HPLabel" type="Label" parent="TopBar"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "HP 20 / 20"
+
+[node name="HPBar" type="ProgressBar" parent="TopBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 18)
+max_value = 20.0
+value = 20.0
+show_percentage = false
+
+[node name="StaminaLabel" type="Label" parent="TopBar"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "体力 10 / 10"
+
+[node name="StaminaBar" type="ProgressBar" parent="TopBar"]
+layout_mode = 2
+custom_minimum_size = Vector2(100, 18)
+max_value = 10.0
+value = 10.0
+show_percentage = false
+
+[node name="StatusLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -150.0
+offset_top = 40.0
+offset_right = 150.0
+offset_bottom = 60.0
+grow_horizontal = 2
+text = ""
+horizontal_alignment = 1
+
+[node name="InventoryLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -280.0
+offset_top = 40.0
+offset_right = -12.0
+offset_bottom = 92.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 13
+text = "背包: 空"
+horizontal_alignment = 2
+autowrap_mode = 2
+
+[node name="LogPanel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -180.0
+offset_bottom = -60.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="LogText" type="RichTextLabel" parent="LogPanel"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 4.0
+offset_right = 1272.0
+offset_bottom = 116.0
+bbcode_enabled = true
+text = ""
+fit_content = true
+scroll_following = true
+
+[node name="BottomBar" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -56.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="ActionInput" type="LineEdit" parent="BottomBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "输入自由行动..."
+custom_minimum_size = Vector2(400, 36)
+
+[node name="SubmitButton" type="Button" parent="BottomBar"]
+layout_mode = 2
+text = "执行"
+custom_minimum_size = Vector2(60, 36)
+
+[node name="SaveButton" type="Button" parent="BottomBar"]
+layout_mode = 2
+text = "保存"
+custom_minimum_size = Vector2(60, 36)
+
+[node name="LoadButton" type="Button" parent="BottomBar"]
+layout_mode = 2
+text = "读取"
+custom_minimum_size = Vector2(60, 36)
+
+[node name="ActionResult" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -80.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_font_sizes/font_size = 14
+text = ""
+horizontal_alignment = 1
