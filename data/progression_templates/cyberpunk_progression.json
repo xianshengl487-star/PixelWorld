@@ -1,0 +1,20 @@
+{
+	"system_id": "cyber_sync",
+	"display_name": "义体同步等级",
+	"exp_label": "义体同步率",
+	"stage_label": "改造阶段",
+	"breakthrough_label": "同步手术",
+	"progression_resources": ["信用点", "义体部件", "神经同步率", "系统破解值", "黑市医生"],
+	"failure_consequences": ["nerve_damage", "cyber_rejection", "wanted_level_up", "cyber_psychosis_risk"],
+	"world_effects": {"corp_attention": 0, "black_market_discount": 0, "city_surveillance": 0},
+	"realms": [
+		{"id": "street_body", "name": "街头素体", "order": 0, "minor_stages": ["裸机", "接口", "适配"], "base_effects": {"agility_add": 1}, "breakthrough": {"required_progress": 50, "success_base": 0.78, "risk_type": "surgery", "failure_effects": ["nerve_damage"]}},
+		{"id": "low_aug", "name": "低阶改造者", "order": 1, "minor_stages": ["手臂", "视网膜", "稳定"], "base_effects": {"attack_add": 2, "cyber_sync_add": 2}, "breakthrough": {"required_progress": 180, "success_base": 0.64, "risk_type": "cyber_rejection", "failure_effects": ["cyber_rejection"]}},
+		{"id": "adapter", "name": "义体适配者", "order": 2, "minor_stages": ["神经桥", "同步", "圆满"], "base_effects": {"move_speed_add": 10, "accuracy_add": 0.02}, "breakthrough": {"required_progress": 420, "success_base": 0.56, "risk_type": "neural_sync_test", "failure_effects": ["nerve_damage"]}},
+		{"id": "combat_aug", "name": "战斗改造体", "order": 3, "minor_stages": ["骨骼", "反射", "火控"], "base_effects": {"attack_add": 8, "defense_add": 4}, "breakthrough": {"required_progress": 820, "success_base": 0.48, "risk_type": "firewall_intrusion", "failure_effects": ["wanted_level_up"]}},
+		{"id": "corp_enhanced", "name": "企业级强化人", "order": 4, "minor_stages": ["授权", "军规", "黑盒"], "base_effects": {"defense_add": 8, "cyber_sync_add": 6}, "breakthrough": {"required_progress": 1500, "success_base": 0.4, "risk_type": "corp_audit", "failure_effects": ["wanted_level_up"]}},
+		{"id": "neural_overclock", "name": "神经超频者", "order": 5, "minor_stages": ["超频", "散热", "稳定"], "base_effects": {"move_speed_add": 24, "dodge_rate_add": 0.05}, "breakthrough": {"required_progress": 2800, "success_base": 0.34, "risk_type": "cyber_psychosis_check", "failure_effects": ["cyber_psychosis_risk"]}},
+		{"id": "data_ghost", "name": "数据幽灵", "order": 6, "minor_stages": ["潜行", "分身", "幽灵"], "base_effects": {"technology_mastery_add": 8, "trap_awareness_add": 0.08}, "breakthrough": {"required_progress": 5000, "success_base": 0.28, "risk_type": "black_ice", "failure_effects": ["nerve_damage"]}},
+		{"id": "machine_ascendant", "name": "机械飞升者", "order": 7, "minor_stages": ["脱壳", "集群", "飞升"], "base_effects": {"cyber_sync_add": 20, "technology_mastery_add": 18}, "breakthrough": {"required_progress": 9000, "success_base": 0.86, "risk_type": "record_only", "failure_effects": ["cyber_rejection"]}}
+	]
+}

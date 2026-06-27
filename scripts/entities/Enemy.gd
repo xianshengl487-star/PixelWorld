@@ -5,6 +5,7 @@ class_name Enemy
 const StatsClass = preload("res://scripts/entities/Stats.gd")
 const CombatSystemClass = preload("res://scripts/combat/CombatSystem.gd")
 const HealthBarClass = preload("res://scripts/ui/HealthBar.gd")
+const AssetResolverClass = preload("res://scripts/assets/AssetResolver.gd")
 
 @export var enemy_id: String = ""
 @export var display_name: String = "敌人"
@@ -17,6 +18,7 @@ var stats = null
 var _tile_size: int = 32
 var _attack_timer: float = 0.0
 var _sprite: ColorRect = null
+var _texture_sprite: Sprite2D = null
 var _label: Label = null
 var _health_bar = null
 
@@ -158,6 +160,12 @@ func _create_visuals() -> void:
 		_sprite.size = Vector2(24, 20)
 		_sprite.position = Vector2(-12, -10)
 		add_child(_sprite)
+	if _texture_sprite == null:
+		_texture_sprite = Sprite2D.new()
+		_texture_sprite.name = "TextureSprite"
+		_texture_sprite.position = Vector2(0, -8)
+		_texture_sprite.scale = Vector2(1.5, 1.5)
+		add_child(_texture_sprite)
 	if _label == null:
 		_label = Label.new()
 		_label.name = "Label"
@@ -176,7 +184,16 @@ func _create_visuals() -> void:
 
 
 func _update_visuals() -> void:
+	var texture = AssetResolverClass.new().get_enemy_texture(enemy_type)
+	if _texture_sprite:
+		_texture_sprite.texture = texture
+		_texture_sprite.visible = texture != null
+		if texture != null:
+			_texture_sprite.region_enabled = texture.get_width() > 32 or texture.get_height() > 32
+			if _texture_sprite.region_enabled:
+				_texture_sprite.region_rect = Rect2(0, 0, min(32, texture.get_width()), min(32, texture.get_height()))
 	if _sprite:
+		_sprite.visible = texture == null
 		match enemy_type:
 			"wolf":
 				_sprite.color = Color(0.45, 0.45, 0.48, 1)

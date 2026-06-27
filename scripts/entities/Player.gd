@@ -6,6 +6,7 @@ class_name Player
 const StatsClass = preload("res://scripts/entities/Stats.gd")
 const CombatSystemClass = preload("res://scripts/combat/CombatSystem.gd")
 const InteractionSystemClass = preload("res://scripts/interactions/InteractionSystem.gd")
+const AssetResolverClass = preload("res://scripts/assets/AssetResolver.gd")
 
 @export var move_speed: float = 150.0
 @export var attack_cooldown: float = 0.45
@@ -37,6 +38,7 @@ func _ready() -> void:
 		add_child(shape_node)
 	
 	_ensure_stats()
+	_apply_visual_texture()
 	
 	# 设置初始位置（从 WorldState 获取）
 	var spawn = WorldState.world_blueprint.get("player_spawn", {"x": 20, "y": 20})
@@ -212,16 +214,21 @@ func _ensure_stats() -> void:
 		stats.stamina_changed.connect(_on_stamina_changed)
 	if not stats.died.is_connected(_on_died):
 		stats.died.connect(_on_died)
+	WorldState.player_stats = stats.to_save_data()
 
 
 func _on_health_changed(current: int, max_value: int) -> void:
 	WorldState.player_health = current
 	WorldState.player_max_health = max_value
+	if stats != null and stats.has_method("to_save_data"):
+		WorldState.player_stats = stats.to_save_data()
 
 
 func _on_stamina_changed(current: int, max_value: int) -> void:
 	WorldState.player_stamina = current
 	WorldState.player_max_stamina = max_value
+	if stats != null and stats.has_method("to_save_data"):
+		WorldState.player_stats = stats.to_save_data()
 
 
 func _on_died() -> void:
@@ -233,3 +240,23 @@ func _find_collision_shape():
 		if child is CollisionShape2D:
 			return child
 	return null
+
+
+func _apply_visual_texture() -> void:
+	var resolver = AssetResolverClass.new()
+	var texture = resolver.get_player_texture("idle_down")
+	var animated = get_node_or_null("AnimatedSprite2D")
+	if animated != null and animated is AnimatedSprite2D and texture != null:
+		var frames = SpriteFrames.new()
+		frames.add_animation("idle_down")
+		frames.add_frame("idle_down", texture)
+		animated.sprite_frames = frames
+		animated.play("idle_down")
+		return
+	var sprite = get_node_or_null("Sprite2D")
+	if sprite != null and sprite is Sprite2D and texture != null:
+		sprite.texture = texture
+		sprite.region_enabled = texture.get_width() > 32 or texture.get_height() > 32
+		if sprite.region_enabled:
+			sprite.region_rect = Rect2(0, 0, min(32, texture.get_width()), min(32, texture.get_height()))
+		sprite.modulate = Color.WHITE

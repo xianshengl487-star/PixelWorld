@@ -1,5 +1,5 @@
 extends SceneTree
-## SmokeTestRunner.gd — CLI 自动化冒烟测试  v0.2.1
+## SmokeTestRunner.gd — CLI 自动化冒烟测试  v0.3.0
 ## 运行: godot --headless --path . --script res://scripts/tests/SmokeTestRunner.gd
 
 const AIClientClass = preload("res://scripts/ai/AIClient.gd")
@@ -9,6 +9,13 @@ const InventoryClass = preload("res://scripts/items/Inventory.gd")
 const ExplorationSystemClass = preload("res://scripts/world/ExplorationSystem.gd")
 const InteractionSystemClass = preload("res://scripts/interactions/InteractionSystem.gd")
 const InteractableClass = preload("res://scripts/interactions/Interactable.gd")
+const AssetResolverClass = preload("res://scripts/assets/AssetResolver.gd")
+const CharacterVisualProfileClass = preload("res://scripts/assets/CharacterVisualProfile.gd")
+const ProgressionTemplateLoaderClass = preload("res://scripts/progression/ProgressionTemplateLoader.gd")
+const ProgressionSystemClass = preload("res://scripts/progression/ProgressionSystem.gd")
+const BreakthroughSystemClass = preload("res://scripts/progression/BreakthroughSystem.gd")
+const TribulationSystemClass = preload("res://scripts/progression/TribulationSystem.gd")
+const RealmEffectApplierClass = preload("res://scripts/progression/RealmEffectApplier.gd")
 const TEST_SEED: int = 42
 
 var _results: Array = []
@@ -24,7 +31,7 @@ var _save_manager = null
 
 func _init() -> void:
 	print("=".repeat(60))
-	print("  PixelWorld CLI Smoke Test Runner  v0.2.1  (seed=%d)" % TEST_SEED)
+	print("  PixelWorld CLI Smoke Test Runner  v0.3.0  (seed=%d)" % TEST_SEED)
 	print("=".repeat(60))
 	
 	await process_frame; await process_frame
@@ -118,6 +125,12 @@ func _run_all_tests() -> void:
 	await _t046(); await _t047(); _t048(); _t049(); _t050()
 	_t051(); _t052(); _t053(); _t054(); _t055(); _t056()
 	_t057(); _t058(); _t059(); _t060(); _t061(); _t062()
+	_t081(); _t082(); _t083(); _t084(); _t085(); _t086()
+	_t087(); _t088(); _t089(); _t090(); _t091(); _t092()
+	_t093(); _t094(); _t095(); _t096(); _t097(); _t098()
+	_t099(); _t100(); _t101(); _t102(); _t103(); _t104()
+	_t105(); _t106(); _t107(); _t108(); _t109(); _t110()
+	_t111(); _t112(); _t113(); _t114(); _t115()
 
 func _t001(): _record("T001", "project.godot 存在", FileAccess.file_exists("res://project.godot"))
 func _t002(): _record("T002", "MainMenu.tscn 可加载", _scene_loadable("res://scenes/MainMenu.tscn"))
@@ -636,6 +649,230 @@ func _t062() -> void:
 	_record("T062", "PLACEHOLDER_ART.md 包含 v0.2.1 说明", ok)
 
 
+# ═══════════════ T081–T115 v0.3.0 成长体系 ═══════════════
+
+func _t081() -> void:
+	_record("T081", "CODE_AUDIT.md 存在", FileAccess.file_exists("res://CODE_AUDIT.md"))
+
+
+func _t082() -> void:
+	var resolver = AssetResolverClass.new()
+	var texture = resolver.get_player_texture("idle_down")
+	_record("T082", "AssetResolver 可加载玩家素材或 fallback", texture != null)
+
+
+func _t083() -> void:
+	var resolver = AssetResolverClass.new()
+	var texture = resolver.get_npc_texture("chief")
+	_record("T083", "AssetResolver 可加载 NPC 素材或 fallback", texture != null)
+
+
+func _t084() -> void:
+	var resolver = AssetResolverClass.new()
+	var texture = resolver.get_enemy_texture("slime")
+	_record("T084", "AssetResolver 可加载敌人素材或 fallback", texture != null)
+
+
+func _t085() -> void:
+	var profile = CharacterVisualProfileClass.new()
+	profile.entity_type = "player"
+	_record("T085", "CharacterVisualProfile 可创建", profile != null and profile.to_dict().get("entity_type", "") == "player")
+
+
+func _t086() -> void:
+	var template = ProgressionTemplateLoaderClass.new().load_template("xianxia")
+	_record("T086", "ProgressionTemplateLoader 可加载修仙模板", not template.is_empty() and template.get("system_id", "") == "xianxia_realm")
+
+
+func _t087() -> void:
+	var template = ProgressionTemplateLoaderClass.new().load_template("xianxia")
+	_record("T087", "修仙模板包含 10 个大境界", template.get("realms", []).size() >= 10, "count=%d" % template.get("realms", []).size())
+
+
+func _t088() -> void:
+	var realm = _template_realm("xianxia", "qi_refining")
+	var count = realm.get("minor_stages", []).size()
+	_record("T088", "修仙炼气包含 10 个小阶段", count >= 10, "count=%d" % count)
+
+
+func _t089() -> void:
+	var realm = _template_realm("xianxia", "foundation")
+	var text = str(realm.get("breakthrough", {})).to_lower()
+	_record("T089", "修仙筑基到金丹包含心魔或雷劫", "heart_demon" in text or "lightning" in text)
+
+
+func _t090() -> void:
+	var template = ProgressionTemplateLoaderClass.new().load_template("xianxia")
+	_world_state.reset_state()
+	var system = ProgressionSystemClass.new()
+	system.bind_world_state(_world_state)
+	system.setup("xianxia", template)
+	_record("T090", "ProgressionSystem 可初始化 xianxia", _world_state.progression_data.get("system_id", "") == "xianxia_realm")
+
+
+func _t091() -> void:
+	var system = _setup_progression("xianxia")
+	var before = int(_world_state.progression_data.get("current_progress", 0))
+	system.gain_progress(15, "smoke")
+	_record("T091", "ProgressionSystem 可获得修为", int(_world_state.progression_data.get("current_progress", 0)) > before)
+
+
+func _t092() -> void:
+	var system = _setup_progression("xianxia")
+	system.gain_progress(30, "smoke")
+	var result = system.advance_minor_stage()
+	_record("T092", "ProgressionSystem 可推进小境界", result.get("ok", false), result.get("message", ""))
+
+
+func _t093() -> void:
+	var realm = _template_realm("xianxia", "mortal")
+	var data = {"current_progress": 80, "failed_breakthroughs": 0, "breakthrough_points": 0}
+	var rate = BreakthroughSystemClass.new().calculate_success_rate(data, realm, {"insight": 2, "luck": 2})
+	_record("T093", "BreakthroughSystem 可计算成功率", rate > 0.0 and rate <= 0.95, "rate=%.2f" % rate)
+
+
+func _t094() -> void:
+	var realm = _template_realm("xianxia", "mortal")
+	var data = {"current_progress": 0, "failed_breakthroughs": 0, "breakthrough_points": 0}
+	var result = BreakthroughSystemClass.new().attempt(data, realm, {"force_result": "failure"})
+	_record("T094", "BreakthroughSystem 失败会记录 failed_breakthroughs", int(data.get("failed_breakthroughs", 0)) == 1 and result.get("result", "") == "failure")
+
+
+func _t095() -> void:
+	var result = TribulationSystemClass.new().start_tribulation("heavenly_lightning", 3, {"base_damage": 4})
+	_record("T095", "TribulationSystem 可启动雷劫", result.get("type", "") == "heavenly_lightning" and int(result.get("rounds", 0)) == 3)
+
+
+func _t096() -> void:
+	var trib = TribulationSystemClass.new()
+	trib.start_tribulation("heavenly_lightning", 3, {"base_damage": 4})
+	var stats = StatsClass.new()
+	stats.configure({"max_health": 20, "health": 20, "defense": 1})
+	var result = trib.resolve_round(1, stats, {"base_damage": 4, "tribulation_resistance": 0.1})
+	_record("T096", "TribulationSystem 可结算雷劫轮次", result.has("damage") and int(result.get("round_index", 0)) == 1)
+
+
+func _t097() -> void:
+	var stats = StatsClass.new()
+	stats.setup_defaults()
+	RealmEffectApplierClass.new().apply_effects(stats, {"attack_add": 3, "max_health_add": 5})
+	_record("T097", "RealmEffectApplier 可修改 Stats progression_bonus", int(stats.progression_bonus.get("attack", 0)) == 3 and stats.attack >= 3)
+
+
+func _t098() -> void:
+	var stats = StatsClass.new()
+	stats.setup_defaults()
+	var ok = stats.base_stats is Dictionary and stats.equipment_bonus is Dictionary and stats.progression_bonus is Dictionary and stats.status_bonus is Dictionary and stats.final_stats is Dictionary
+	_record("T098", "Stats 支持 base/equipment/progression/status/final 结构", ok)
+
+
+func _t099() -> void:
+	if _save_manager == null:
+		_record("T099", "SaveManager 保存 progression_data", false, "SaveManager缺失")
+		return
+	_world_state.progression_data = _world_state._default_progression_data()
+	_world_state.progression_data["current_realm_id"] = "smoke_realm"
+	var ok = _save_manager.save_game("smoke_progression") and _save_manager.has_save("smoke_progression")
+	_record("T099", "SaveManager 保存 progression_data", ok)
+
+
+func _t100() -> void:
+	if _save_manager == null:
+		_record("T100", "SaveManager 读取 progression_data", false, "SaveManager缺失")
+		return
+	_world_state.progression_data["current_realm_id"] = "changed"
+	var result = _save_manager.load_game("smoke_progression")
+	var ok = result.get("ok", false) and _world_state.progression_data.get("current_realm_id", "") == "smoke_realm"
+	_save_manager.delete_save("smoke_progression")
+	_record("T100", "SaveManager 读取 progression_data", ok)
+
+
+func _t101() -> void:
+	_record("T101", "magic_progression.json 存在并可加载", not ProgressionTemplateLoaderClass.new().load_template("magic").is_empty())
+
+
+func _t102() -> void:
+	_record("T102", "apocalypse_progression.json 存在并可加载", not ProgressionTemplateLoaderClass.new().load_template("apocalypse").is_empty())
+
+
+func _t103() -> void:
+	_record("T103", "cyberpunk_progression.json 存在并可加载", not ProgressionTemplateLoaderClass.new().load_template("cyberpunk").is_empty())
+
+
+func _t104() -> void:
+	_record("T104", "wuxia_progression.json 存在并可加载", not ProgressionTemplateLoaderClass.new().load_template("wuxia").is_empty())
+
+
+func _t105() -> void:
+	_record("T105", "urban_ability_progression.json 存在并可加载", not ProgressionTemplateLoaderClass.new().load_template("urban_ability").is_empty())
+
+
+func _t106() -> void:
+	_record("T106", "strange_tale_progression.json 存在并可加载", not ProgressionTemplateLoaderClass.new().load_template("strange_tale").is_empty())
+
+
+func _t107() -> void:
+	_record("T107", "star_sci_progression.json 存在并可加载", not ProgressionTemplateLoaderClass.new().load_template("star_sci").is_empty())
+
+
+func _t108() -> void:
+	var ok = true
+	for world_type in ProgressionTemplateLoaderClass.new().get_supported_world_types():
+		var template = ProgressionTemplateLoaderClass.new().load_template(world_type)
+		if template.get("realms", []).size() < 8:
+			ok = false
+			break
+	_record("T108", "每个模板至少 8 个阶段", ok)
+
+
+func _t109() -> void:
+	var ok = true
+	for world_type in ProgressionTemplateLoaderClass.new().get_supported_world_types():
+		var template = ProgressionTemplateLoaderClass.new().load_template(world_type)
+		if template.get("progression_resources", []).is_empty():
+			ok = false
+			break
+	_record("T109", "每个模板有升级资源名称", ok)
+
+
+func _t110() -> void:
+	var ok = true
+	for world_type in ProgressionTemplateLoaderClass.new().get_supported_world_types():
+		var template = ProgressionTemplateLoaderClass.new().load_template(world_type)
+		if template.get("failure_consequences", []).is_empty():
+			ok = false
+			break
+	_record("T110", "每个模板有失败代价配置", ok)
+
+
+func _t111() -> void:
+	var scene = load("res://scenes/ui/GameHUD.tscn")
+	var hud = scene.instantiate() if scene != null else null
+	var ok = hud != null and hud.has_method("update_progression_display")
+	if hud != null:
+		hud.queue_free()
+	_record("T111", "HUD 有 progression 显示方法", ok)
+
+
+func _t112() -> void:
+	_record("T112", "WorldState 有 realm_history", typeof(_world_state.realm_history) == TYPE_ARRAY)
+
+
+func _t113() -> void:
+	_record("T113", "WorldState 有 tribulation_record", typeof(_world_state.tribulation_record) == TYPE_ARRAY)
+
+
+func _t114() -> void:
+	var resolver = AssetResolverClass.new()
+	var texture = resolver.resolve_texture("res://art/generated/not_here/missing.png", "")
+	_record("T114", "角色材质缺失时不会崩溃", texture == null)
+
+
+func _t115() -> void:
+	var text = _read_text("res://README.md")
+	_record("T115", "README 更新当前版本和玩法路线图", "v0.3.0" in text and "玩法路线图" in text)
+
+
 func _all_files_exist(paths: Array) -> bool:
 	for path in paths:
 		if not FileAccess.file_exists(path):
@@ -652,6 +889,23 @@ func _read_text(path: String) -> String:
 	var text = file.get_as_text()
 	file.close()
 	return text
+
+
+func _template_realm(world_type: String, realm_id: String) -> Dictionary:
+	var template = ProgressionTemplateLoaderClass.new().load_template(world_type)
+	for realm in template.get("realms", []):
+		if str(realm.get("id", "")) == realm_id:
+			return realm
+	return {}
+
+
+func _setup_progression(world_type: String):
+	var template = ProgressionTemplateLoaderClass.new().load_template(world_type)
+	_world_state.reset_state()
+	var system = ProgressionSystemClass.new()
+	system.bind_world_state(_world_state)
+	system.setup(world_type, template)
+	return system
 
 
 # ═══════════════ 汇总 ═══════════════

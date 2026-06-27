@@ -3,6 +3,10 @@
 # Auto-generated .gitignore for Godot 4
 # 忽略真实 API Key 文件
 .env
+.env.local
+.env.*.local
+*.key
+*.pem
 
 # Godot
 .godot/
@@ -12,5 +16,16 @@
 # Local assistant/work memory
 .workbuddy/
 
+# Runtime data
+logs/
+*.log
+saves/
+user/
+user://
+*.tmp
+
 # Windows
 Thumbs.db
+
+# macOS
+.DS_Store

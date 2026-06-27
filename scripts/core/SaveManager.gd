@@ -65,7 +65,16 @@ func _collect_save_data() -> Dictionary:
 		"defeated_enemies": WorldState.defeated_enemies,
 		"current_region": WorldState.current_region,
 		"current_day": WorldState.current_day,
-		"current_hour": WorldState.current_hour
+		"current_hour": WorldState.current_hour,
+		"progression_data": WorldState.progression_data,
+		"player_stats": WorldState.player_stats,
+		"unlocked_features": WorldState.unlocked_features,
+		"world_rule_modifiers": WorldState.world_rule_modifiers,
+		"realm_history": WorldState.realm_history,
+		"breakthrough_history": WorldState.breakthrough_history,
+		"tribulation_record": WorldState.tribulation_record,
+		"progression_template_id": WorldState.progression_data.get("system_id", ""),
+		"progression_world_type": WorldState.progression_data.get("world_type", WorldState.world_type)
 	}
 
 
@@ -85,3 +94,21 @@ func _apply_save_data(data: Dictionary) -> void:
 	WorldState.current_region = data.get("current_region", WorldState.current_region)
 	WorldState.current_day = int(data.get("current_day", WorldState.current_day))
 	WorldState.current_hour = int(data.get("current_hour", WorldState.current_hour))
+	WorldState.progression_data = data.get("progression_data", WorldState._default_progression_data())
+	WorldState.player_stats = data.get("player_stats", {})
+	var features_data = data.get("unlocked_features", {})
+	if features_data is Array:
+		var feature_dict: Dictionary = {}
+		for feature in features_data:
+			feature_dict[str(feature)] = true
+		features_data = feature_dict
+	WorldState.unlocked_features = features_data if features_data is Dictionary else {}
+	WorldState.world_rule_modifiers = data.get("world_rule_modifiers", WorldState.progression_data.get("world_modifiers", {}))
+	WorldState.realm_history = data.get("realm_history", WorldState.progression_data.get("realm_history", []))
+	WorldState.breakthrough_history = data.get("breakthrough_history", WorldState.progression_data.get("breakthrough_history", []))
+	WorldState.tribulation_record = data.get("tribulation_record", WorldState.progression_data.get("tribulation_record", []))
+	WorldState.progression_data["unlocked_features"] = WorldState.unlocked_features.keys()
+	WorldState.progression_data["world_modifiers"] = WorldState.world_rule_modifiers
+	WorldState.progression_data["realm_history"] = WorldState.realm_history
+	WorldState.progression_data["breakthrough_history"] = WorldState.breakthrough_history
+	WorldState.progression_data["tribulation_record"] = WorldState.tribulation_record

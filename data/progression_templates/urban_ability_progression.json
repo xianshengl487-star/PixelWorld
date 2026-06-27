@@ -1,0 +1,22 @@
+{
+	"system_id": "urban_ability_rank",
+	"display_name": "异能评级",
+	"exp_label": "异能熟练度",
+	"stage_label": "评级阶段",
+	"breakthrough_label": "评级审查",
+	"progression_resources": ["异能熟练度", "精神稳定度", "异常核心", "官方评级许可"],
+	"failure_consequences": ["ability_rampage", "official_monitoring", "mental_damage"],
+	"world_effects": {"bureau_attention": 0, "exposure_risk": 0, "underground_recruitment": 0},
+	"realms": [
+		{"id": "normal", "name": "普通人", "order": 0, "minor_stages": ["观察", "异常感", "临界"], "base_effects": {"perception_add": 1}, "breakthrough": {"required_progress": 35, "success_base": 0.8, "risk_type": "ability_test", "failure_effects": ["mental_damage"]}},
+		{"id": "awakened", "name": "觉醒者", "order": 1, "minor_stages": ["觉醒", "控制", "稳定"], "base_effects": {"attack_add": 1, "sanity_resistance_add": 1}, "breakthrough": {"required_progress": 120, "success_base": 0.66, "risk_type": "official_test", "failure_effects": ["official_monitoring"]}},
+		{"id": "rank_e", "name": "E级", "order": 2, "minor_stages": ["E-", "E", "E+"], "base_effects": {"attack_add": 2}, "breakthrough": {"required_progress": 260, "success_base": 0.58, "risk_type": "anomaly_event", "failure_effects": ["ability_rampage"]}},
+		{"id": "rank_d", "name": "D级", "order": 3, "minor_stages": ["D-", "D", "D+"], "base_effects": {"max_stamina_add": 6}, "breakthrough": {"required_progress": 520, "success_base": 0.5, "risk_type": "pollution_check", "failure_effects": ["mental_damage"]}},
+		{"id": "rank_c", "name": "C级", "order": 4, "minor_stages": ["C-", "C", "C+"], "base_effects": {"attack_add": 7, "defense_add": 2}, "breakthrough": {"required_progress": 980, "success_base": 0.42, "risk_type": "bureau_review", "failure_effects": ["official_monitoring"]}},
+		{"id": "rank_b", "name": "B级", "order": 5, "minor_stages": ["B-", "B", "B+"], "base_effects": {"sanity_resistance_add": 4, "dodge_rate_add": 0.03}, "breakthrough": {"required_progress": 1800, "success_base": 0.35, "risk_type": "ability_overload", "failure_effects": ["ability_rampage"]}},
+		{"id": "rank_a", "name": "A级", "order": 6, "minor_stages": ["A-", "A", "A+"], "base_effects": {"attack_add": 18, "sanity_resistance_add": 8}, "breakthrough": {"required_progress": 3400, "success_base": 0.3, "risk_type": "disaster_assessment", "failure_effects": ["official_monitoring"]}},
+		{"id": "rank_s", "name": "S级", "order": 7, "minor_stages": ["S-", "S", "S+"], "base_effects": {"attack_add": 30, "defense_add": 15}, "breakthrough": {"required_progress": 6200, "success_base": 0.24, "risk_type": "myth_trial", "failure_effects": ["mental_damage"]}},
+		{"id": "disaster", "name": "灾害级", "order": 8, "minor_stages": ["区域", "城市", "国家"], "base_effects": {"attack_add": 45, "sanity_resistance_add": 15}, "breakthrough": {"required_progress": 9200, "success_base": 0.2, "risk_type": "myth_review", "failure_effects": ["ability_rampage"]}},
+		{"id": "mythic", "name": "神话级", "order": 9, "minor_stages": ["神话种子", "神话", "终局"], "base_effects": {"attack_add": 70, "sanity_resistance_add": 25}, "breakthrough": {"required_progress": 14000, "success_base": 0.9, "risk_type": "record_only", "failure_effects": ["delay"]}}
+	]
+}

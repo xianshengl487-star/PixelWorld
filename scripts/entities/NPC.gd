@@ -3,6 +3,8 @@ class_name NPC
 ## NPC.gd — NPC 控制脚本
 ## 管理 NPC 数据、显示、交互
 
+const AssetResolverClass = preload("res://scripts/assets/AssetResolver.gd")
+
 # NPC 数据
 var npc_data: Dictionary = {}
 var _ai_client = null
@@ -60,8 +62,16 @@ func _setup_display() -> void:
 		_label.position = Vector2(0, -24)
 	
 	if _sprite:
-		# 根据角色类型改变颜色
 		var role = npc_data.get("role", "villager")
+		var texture = AssetResolverClass.new().get_npc_texture(str(role))
+		if texture != null:
+			_sprite.texture = texture
+			_sprite.region_enabled = texture.get_width() > 32 or texture.get_height() > 32
+			if _sprite.region_enabled:
+				_sprite.region_rect = Rect2(0, 0, min(32, texture.get_width()), min(32, texture.get_height()))
+			_sprite.modulate = Color.WHITE
+			return
+		# 根据角色类型改变颜色
 		match role:
 			"quest_giver":
 				_sprite.modulate = Color(1, 0.85, 0.3)  # 金色

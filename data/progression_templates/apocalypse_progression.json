@@ -1,0 +1,21 @@
+{
+	"system_id": "apocalypse_awaken",
+	"display_name": "觉醒等级",
+	"exp_label": "进化值",
+	"stage_label": "异化阶段",
+	"breakthrough_label": "进化压制",
+	"progression_resources": ["进化值", "晶核", "战斗经验", "感染抗性", "基因稳定度"],
+	"failure_consequences": ["infection_rise", "temporary_lost_control", "mutation_mark", "faction_fear"],
+	"world_effects": {"base_attitude": 0, "monster_aggression": 0, "infection_zone_attention": 0},
+	"realms": [
+		{"id": "survivor", "name": "普通幸存者", "order": 0, "minor_stages": ["求生", "适应", "临界"], "base_effects": {"max_health_add": 2}, "breakthrough": {"required_progress": 40, "success_base": 0.78, "risk_type": "infection_trial", "failure_effects": ["infection_rise"]}},
+		{"id": "first_awaken", "name": "初醒者", "order": 1, "minor_stages": ["觉醒", "控制", "稳定"], "base_effects": {"attack_add": 2, "infection_resistance_add": 1}, "breakthrough": {"required_progress": 140, "success_base": 0.65, "risk_type": "core_absorb", "failure_effects": ["temporary_lost_control"]}},
+		{"id": "rank_1", "name": "一级觉醒者", "order": 2, "minor_stages": ["初段", "中段", "高段"], "base_effects": {"max_health_add": 8, "attack_add": 3}, "breakthrough": {"required_progress": 320, "success_base": 0.58, "risk_type": "gene_rebuild", "failure_effects": ["mutation_mark"]}},
+		{"id": "rank_2", "name": "二级觉醒者", "order": 3, "minor_stages": ["初段", "中段", "高段"], "base_effects": {"defense_add": 3, "infection_resistance_add": 2}, "breakthrough": {"required_progress": 620, "success_base": 0.5, "risk_type": "infection_trial", "failure_effects": ["infection_rise"]}},
+		{"id": "rank_3", "name": "三级觉醒者", "order": 4, "minor_stages": ["初段", "中段", "高段"], "base_effects": {"attack_add": 8, "move_speed_add": 8}, "breakthrough": {"required_progress": 1100, "success_base": 0.43, "risk_type": "horde_trial", "failure_effects": ["faction_fear"]}},
+		{"id": "lord", "name": "领主级", "order": 5, "minor_stages": ["领地感知", "威压", "圆满"], "base_effects": {"max_health_add": 30, "defense_add": 8}, "breakthrough": {"required_progress": 2100, "success_base": 0.35, "risk_type": "gene_collapse", "failure_effects": ["temporary_lost_control"]}},
+		{"id": "calamity", "name": "灾厄级", "order": 6, "minor_stages": ["灾厄印记", "群体威慑", "圆满"], "base_effects": {"attack_add": 20, "infection_resistance_add": 8}, "breakthrough": {"required_progress": 3800, "success_base": 0.3, "risk_type": "city_horde_trial", "failure_effects": ["infection_rise"]}},
+		{"id": "natural_disaster", "name": "天灾级", "order": 7, "minor_stages": ["区域天灾", "生态改变", "圆满"], "base_effects": {"attack_add": 32, "defense_add": 18}, "breakthrough": {"required_progress": 7000, "success_base": 0.24, "risk_type": "world_mutation", "failure_effects": ["mutation_mark"]}},
+		{"id": "doomsday_ruler", "name": "末日支配者", "order": 8, "minor_stages": ["支配", "重塑", "终局"], "base_effects": {"attack_add": 50, "max_health_add": 80}, "breakthrough": {"required_progress": 11000, "success_base": 0.88, "risk_type": "record_only", "failure_effects": ["resource_loss"]}}
+	]
+}

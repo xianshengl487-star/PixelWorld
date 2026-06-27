@@ -1,0 +1,22 @@
+{
+	"system_id": "magic_rank",
+	"display_name": "法师位阶",
+	"exp_label": "魔力经验",
+	"stage_label": "法环阶段",
+	"breakthrough_label": "晋阶仪式",
+	"progression_resources": ["魔力经验", "法术研究", "魔晶", "学院许可", "元素亲和"],
+	"failure_consequences": ["mana_disorder", "spell_backfire", "element_pollution", "academy_ban"],
+	"world_effects": {"academy_attention": 0, "royal_recruitment": 0, "monster_sensitivity": 0},
+	"realms": [
+		{"id": "mundane", "name": "无魔者", "order": 0, "minor_stages": ["感知", "记忆", "描摹"], "base_effects": {"perception_add": 1}, "breakthrough": {"required_progress": 30, "success_base": 0.8, "risk_type": "mana_disorder", "failure_effects": ["fatigue"]}},
+		{"id": "apprentice", "name": "魔法学徒", "order": 1, "minor_stages": ["一环雏形", "一环稳定", "一环圆满"], "base_effects": {"magic_affinity_add": 2, "max_stamina_add": 4}, "breakthrough": {"required_progress": 120, "success_base": 0.65, "risk_type": "spell_backfire", "failure_effects": ["mana_disorder"]}},
+		{"id": "junior_mage", "name": "初级法师", "order": 2, "minor_stages": ["元素入门", "法术连缀", "法环圆满"], "base_effects": {"attack_add": 2, "magic_affinity_add": 3}, "breakthrough": {"required_progress": 260, "success_base": 0.58, "risk_type": "element_trial", "failure_effects": ["element_pollution"]}},
+		{"id": "middle_mage", "name": "中级法师", "order": 3, "minor_stages": ["双环", "稳定", "圆满"], "base_effects": {"attack_add": 5, "max_stamina_add": 6}, "breakthrough": {"required_progress": 520, "success_base": 0.5, "risk_type": "element_trial", "failure_effects": ["spell_backfire"]}},
+		{"id": "senior_mage", "name": "高级法师", "order": 4, "minor_stages": ["三环", "共鸣", "圆满"], "base_effects": {"attack_add": 8, "defense_add": 2}, "breakthrough": {"required_progress": 950, "success_base": 0.42, "risk_type": "academy_trial", "failure_effects": ["academy_ban"]}},
+		{"id": "archmage", "name": "大法师", "order": 5, "minor_stages": ["领域雏形", "领域稳定", "圆满"], "base_effects": {"magic_affinity_add": 8, "crit_rate_add": 0.03}, "breakthrough": {"required_progress": 1800, "success_base": 0.36, "risk_type": "forbidden_spell_backlash", "failure_effects": ["spell_backfire"]}},
+		{"id": "magister", "name": "魔导师", "order": 6, "minor_stages": ["学派权威", "元素支配", "圆满"], "base_effects": {"discovery_chance_add": 0.05, "attack_add": 12}, "breakthrough": {"required_progress": 3200, "success_base": 0.3, "risk_type": "astral_trial", "failure_effects": ["element_pollution"]}},
+		{"id": "legendary_mage", "name": "传奇法师", "order": 7, "minor_stages": ["传奇印记", "禁咒门槛", "圆满"], "base_effects": {"attack_add": 20, "defense_add": 8}, "breakthrough": {"required_progress": 5200, "success_base": 0.25, "risk_type": "forbidden_spell_recoil", "failure_effects": ["academy_ban"]}},
+		{"id": "forbidden_caster", "name": "禁咒使", "order": 8, "minor_stages": ["禁咒契约", "代价控制", "圆满"], "base_effects": {"attack_add": 30, "magic_affinity_add": 15}, "breakthrough": {"required_progress": 7800, "success_base": 0.22, "risk_type": "astral_examination", "failure_effects": ["mana_disorder"]}},
+		{"id": "astral_sage", "name": "星界贤者", "order": 9, "minor_stages": ["星界投影", "星门", "贤者"], "base_effects": {"technology_mastery_add": 5, "magic_affinity_add": 25}, "breakthrough": {"required_progress": 12000, "success_base": 0.9, "risk_type": "record_only", "failure_effects": ["astral_delay"]}}
+	]
+}

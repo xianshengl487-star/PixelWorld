@@ -1,0 +1,21 @@
+{
+	"system_id": "strange_tale_pollution",
+	"display_name": "污染适应度",
+	"exp_label": "规则理解度",
+	"stage_label": "污染阶段",
+	"breakthrough_label": "规则试炼",
+	"progression_resources": ["规则理解度", "污染值", "理智稳定度", "禁忌知识"],
+	"failure_consequences": ["sanity_loss", "pollution_rise", "npc_fear", "action_restriction"],
+	"world_effects": {"entity_attention": 0, "safe_zone_rejection": 0, "rule_distortion": 0},
+	"realms": [
+		{"id": "normal", "name": "普通人", "order": 0, "minor_stages": ["察觉", "接触", "存活"], "base_effects": {"sanity_resistance_add": 1}, "breakthrough": {"required_progress": 35, "success_base": 0.78, "risk_type": "rule_contact", "failure_effects": ["sanity_loss"]}},
+		{"id": "contacted", "name": "规则接触者", "order": 1, "minor_stages": ["记录", "回避", "利用"], "base_effects": {"trap_awareness_add": 0.03}, "breakthrough": {"required_progress": 120, "success_base": 0.64, "risk_type": "pollution_pressure", "failure_effects": ["pollution_rise"]}},
+		{"id": "low_adapter", "name": "低污染适应者", "order": 2, "minor_stages": ["低污", "稳定", "圆满"], "base_effects": {"sanity_resistance_add": 3}, "breakthrough": {"required_progress": 260, "success_base": 0.56, "risk_type": "rule_trial", "failure_effects": ["action_restriction"]}},
+		{"id": "abnormal_sense", "name": "异常感知者", "order": 3, "minor_stages": ["感知", "命名", "圆满"], "base_effects": {"discovery_chance_add": 0.06}, "breakthrough": {"required_progress": 520, "success_base": 0.48, "risk_type": "forbidden_choice", "failure_effects": ["npc_fear"]}},
+		{"id": "rule_user", "name": "规则利用者", "order": 4, "minor_stages": ["借用", "反制", "圆满"], "base_effects": {"attack_add": 6, "trap_awareness_add": 0.08}, "breakthrough": {"required_progress": 980, "success_base": 0.4, "risk_type": "abnormal_assimilation", "failure_effects": ["pollution_rise"]}},
+		{"id": "half_entity", "name": "半异常体", "order": 5, "minor_stages": ["边界", "伪装", "圆满"], "base_effects": {"defense_add": 8, "sanity_resistance_add": 8}, "breakthrough": {"required_progress": 1800, "success_base": 0.34, "risk_type": "sanity_collapse", "failure_effects": ["sanity_loss"]}},
+		{"id": "containment", "name": "收容级存在", "order": 6, "minor_stages": ["可收容", "难收容", "圆满"], "base_effects": {"attack_add": 16, "defense_add": 12}, "breakthrough": {"required_progress": 3400, "success_base": 0.28, "risk_type": "entity_attention", "failure_effects": ["npc_fear"]}},
+		{"id": "forbidden", "name": "禁忌级存在", "order": 7, "minor_stages": ["禁名", "禁行", "禁域"], "base_effects": {"sanity_resistance_add": 18, "attack_add": 30}, "breakthrough": {"required_progress": 6500, "success_base": 0.22, "risk_type": "rule_core", "failure_effects": ["action_restriction"]}},
+		{"id": "tale_core", "name": "怪谈核心", "order": 8, "minor_stages": ["核心", "传说", "终局"], "base_effects": {"attack_add": 48, "trap_awareness_add": 0.2}, "breakthrough": {"required_progress": 10000, "success_base": 0.88, "risk_type": "record_only", "failure_effects": ["delay"]}}
+	]
+}

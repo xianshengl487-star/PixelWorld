@@ -1,0 +1,22 @@
+{
+	"system_id": "wuxia_martial",
+	"display_name": "武道境界",
+	"exp_label": "内力",
+	"stage_label": "武学阶段",
+	"breakthrough_label": "破关",
+	"progression_resources": ["内力", "招式熟练度", "秘籍", "经脉打通", "江湖阅历"],
+	"failure_consequences": ["qi_deviation", "meridian_damage", "reputation_loss"],
+	"world_effects": {"jianghu_fame": 0, "sect_challenge": 0, "official_attention": 0},
+	"realms": [
+		{"id": "ordinary", "name": "普通人", "order": 0, "minor_stages": ["强身", "习拳", "入门"], "base_effects": {"max_health_add": 2}, "breakthrough": {"required_progress": 40, "success_base": 0.8, "risk_type": "basic_training", "failure_effects": ["fatigue"]}},
+		{"id": "third_rate", "name": "三流高手", "order": 1, "minor_stages": ["招式", "内息", "圆满"], "base_effects": {"attack_add": 2, "inner_power_add": 1}, "breakthrough": {"required_progress": 120, "success_base": 0.66, "risk_type": "meridian_opening", "failure_effects": ["meridian_damage"]}},
+		{"id": "second_rate", "name": "二流高手", "order": 2, "minor_stages": ["小成", "大成", "圆满"], "base_effects": {"attack_add": 4, "defense_add": 2}, "breakthrough": {"required_progress": 260, "success_base": 0.58, "risk_type": "closed_training", "failure_effects": ["qi_deviation"]}},
+		{"id": "first_rate", "name": "一流高手", "order": 3, "minor_stages": ["名动", "压阵", "圆满"], "base_effects": {"attack_add": 8, "dodge_rate_add": 0.03}, "breakthrough": {"required_progress": 520, "success_base": 0.5, "risk_type": "life_death_duel", "failure_effects": ["reputation_loss"]}},
+		{"id": "acquired", "name": "后天", "order": 4, "minor_stages": ["经脉", "内壮", "圆满"], "base_effects": {"inner_power_add": 5, "max_stamina_add": 10}, "breakthrough": {"required_progress": 1000, "success_base": 0.42, "risk_type": "qi_deviation", "failure_effects": ["qi_deviation"]}},
+		{"id": "innate", "name": "先天", "order": 5, "minor_stages": ["先天气", "周天", "圆满"], "base_effects": {"attack_add": 14, "defense_add": 8}, "breakthrough": {"required_progress": 1900, "success_base": 0.35, "risk_type": "martial_conference", "failure_effects": ["reputation_loss"]}},
+		{"id": "master", "name": "宗师", "order": 6, "minor_stages": ["开宗", "化招", "圆满"], "base_effects": {"inner_power_add": 12, "crit_rate_add": 0.04}, "breakthrough": {"required_progress": 3500, "success_base": 0.3, "risk_type": "dao_of_martial", "failure_effects": ["qi_deviation"]}},
+		{"id": "grandmaster", "name": "大宗师", "order": 7, "minor_stages": ["无招", "无我", "圆满"], "base_effects": {"attack_add": 28, "dodge_rate_add": 0.08}, "breakthrough": {"required_progress": 6200, "success_base": 0.25, "risk_type": "void_gate", "failure_effects": ["meridian_damage"]}},
+		{"id": "myth", "name": "武林神话", "order": 8, "minor_stages": ["传说", "镇世", "圆满"], "base_effects": {"attack_add": 42, "defense_add": 24}, "breakthrough": {"required_progress": 9000, "success_base": 0.2, "risk_type": "shatter_void", "failure_effects": ["reputation_loss"]}},
+		{"id": "void_shatter", "name": "破碎虚空", "order": 9, "minor_stages": ["虚空门", "踏入", "终局"], "base_effects": {"inner_power_add": 30, "attack_add": 60}, "breakthrough": {"required_progress": 14000, "success_base": 0.9, "risk_type": "record_only", "failure_effects": ["delay"]}}
+	]
+}

@@ -4,6 +4,83 @@
 
 ---
 
+## 2026-06-28 01:35 — v0.3.0 代码审查与世界观成长体系
+
+### 更新类型
+
+审查 / 玩法 / 成长 / 世界观 / 存档 / 素材 / 测试 / 文档
+
+### 本次改动
+
+* 新增 `CODE_AUDIT.md`，记录项目现状、已修复问题、保留风险和后续建议
+* 增强 `.gitignore`，补充本地环境、密钥、日志、存档和临时文件忽略规则
+* 更新 `README.md` 到 v0.3.0，加入成长系统说明、玩法路线图和真实测试结果
+* 新增 `AssetResolver.gd`，支持 `ResourceLoader` 与 `Image.load()` 双路径加载 generated PNG，并在缺失时安全 fallback
+* 新增 `CharacterVisualProfile.gd`
+* 强化 `Player.gd` / `NPC.gd` / `Enemy.gd` 材质调用 fallback，不因素材缺失导致角色生成失败
+* 新增 `ProgressionSystem.gd`
+* 新增 `ProgressionTemplateLoader.gd`
+* 新增 `BreakthroughSystem.gd`
+* 新增 `TribulationSystem.gd`
+* 新增 `RealmEffectApplier.gd`
+* 新增 `WorldRuleModifier.gd`
+* 重构 `Stats.gd` 为 `base/equipment/progression/status/final` 结构，同时保留旧字段兼容
+* 扩展 `WorldState.gd`，增加 `progression_data`、境界历史、突破历史、雷劫记录、解锁能力和世界修正
+* 扩展 `SaveManager.gd`，保存/读取成长数据和玩家属性数据，兼容旧存档缺字段
+* 扩展 `GameHUD.gd` / `GameHUD.tscn`，加入成长体系 Label 与显示方法
+* 新增修仙完整境界模板
+* 新增魔法/末世/赛博/武侠/都市异能/怪谈/星际成长模板
+* 新增 `GAMEPLAY_PROGRESSION.md`
+* 扩展 `SmokeTestRunner.gd`，新增 T081-T115
+* 更新 `TEST_REPORT.md`
+
+### 涉及文件
+
+* `res://CODE_AUDIT.md`
+* `res://GAMEPLAY_PROGRESSION.md`
+* `res://README.md`
+* `res://.gitignore`
+* `res://project.godot`
+* `res://scenes/MainMenu.tscn`
+* `res://scenes/ui/GameHUD.tscn`
+* `res://scripts/assets/...`
+* `res://scripts/progression/...`
+* `res://scripts/core/WorldState.gd`
+* `res://scripts/core/SaveManager.gd`
+* `res://scripts/entities/Stats.gd`
+* `res://scripts/entities/Player.gd`
+* `res://scripts/entities/NPC.gd`
+* `res://scripts/entities/Enemy.gd`
+* `res://scripts/ui/GameHUD.gd`
+* `res://scripts/tests/SmokeTestRunner.gd`
+* `res://data/progression_templates/...`
+* `res://DEV_LOG.md`
+* `res://TEST_REPORT.md`
+
+### 原因
+
+v0.3.0 需要先把代码底座、视觉素材引用、成长系统数据结构、世界模板、存档字段和测试覆盖立住，后续才能把境界/位阶/突破/试炼真正接入战斗、探索、事件和 NPC 叙事。
+
+### 测试结果
+
+* JSON 模板解析：PASS
+* `git diff --check`：PASS
+* Godot 4.7 CLI 编译验证：PASS
+* SmokeTestRunner：96/97 PASS
+* 新增 T081-T115：35/35 PASS
+* 失败项：T025，继续保留为 CLI headless SceneTree/初始化待编辑器 F5 验证项
+* T028：本轮 CLI 通过，count=867
+* 编辑器 F5 手动验证：未执行
+
+### 后续待办
+
+* 编辑器 F5 验证玩家节点、碰撞、HUD 和素材显示
+* 将 `CombatSystem` 逐步接入 accuracy/dodge/crit/resistance 等新属性
+* 将突破条件中的物品、地点、flag 与实际探索/背包/事件系统连接
+* 为存档增加 `save_version` 和迁移器
+
+---
+
 ## 2026-06-28 00:25 — v0.2.1 GitHub 发布准备
 
 ### 更新类型

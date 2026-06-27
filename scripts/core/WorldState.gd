@@ -3,6 +3,7 @@ extends Node
 ## 保存所有游戏运行时状态
 
 const InventoryClass = preload("res://scripts/items/Inventory.gd")
+const ProgressionTemplateLoaderClass = preload("res://scripts/progression/ProgressionTemplateLoader.gd")
 
 # ============================================
 # 世界蓝图
@@ -26,6 +27,7 @@ var player_max_health: int = 20
 var player_health: int = 20
 var player_max_stamina: int = 10
 var player_stamina: int = 10
+var player_stats: Dictionary = {}
 
 # ============================================
 # 历史记录
@@ -43,6 +45,16 @@ var inventory = InventoryClass.new()
 # ============================================
 var faction_states: Dictionary = {}
 var event_states: Dictionary = {}
+
+# ============================================
+# 世界观成长系统
+# ============================================
+var progression_data: Dictionary = {}
+var unlocked_features: Dictionary = {}
+var world_rule_modifiers: Dictionary = {}
+var realm_history: Array = []
+var tribulation_record: Array = []
+var breakthrough_history: Array = []
 
 # ============================================
 # AI Provider 状态
@@ -68,6 +80,7 @@ func reset_state() -> void:
 	player_health = 20
 	player_max_stamina = 10
 	player_stamina = 10
+	player_stats = {}
 	action_history.clear()
 	npc_memory.clear()
 	discovered_locations.clear()
@@ -77,6 +90,12 @@ func reset_state() -> void:
 	inventory = InventoryClass.new()
 	faction_states.clear()
 	event_states.clear()
+	progression_data = _default_progression_data()
+	unlocked_features.clear()
+	world_rule_modifiers.clear()
+	realm_history.clear()
+	tribulation_record.clear()
+	breakthrough_history.clear()
 	ai_provider_status = ConfigManager.get_env("AI_PROVIDER", "mock")
 	last_errors.clear()
 
@@ -93,7 +112,7 @@ func set_world_blueprint(blueprint: Dictionary) -> void:
 	)
 	player_health = player_max_health
 	player_stamina = player_max_stamina
-	
+
 	# 初始化势力状态
 	for faction in blueprint.get("factions", []):
 		var fid = faction.get("id", "")
@@ -101,7 +120,7 @@ func set_world_blueprint(blueprint: Dictionary) -> void:
 			"attitude_to_player": faction.get("attitude_to_player", 0),
 			"name": faction.get("name", fid)
 		}
-	
+
 	# 初始化事件状态
 	for event in blueprint.get("events", []):
 		var eid = event.get("id", "")
@@ -110,6 +129,97 @@ func set_world_blueprint(blueprint: Dictionary) -> void:
 			"name": event.get("name", eid),
 			"progress": 0
 		}
+
+	var template = ProgressionTemplateLoaderClass.new().load_template(world_type)
+	if not template.is_empty():
+		init_progression(world_type, template)
+
+
+## 初始化世界观成长体系
+func init_progression(next_world_type: String, template: Dictionary) -> void:
+	progression_data = _default_progression_data()
+	world_type = next_world_type
+	var realms = template.get("realms", [])
+	var first_realm = realms[0] if realms.size() > 0 else {}
+	var stages = first_realm.get("minor_stages", [])
+	progression_data["world_type"] = next_world_type
+	progression_data["system_id"] = template.get("system_id", "")
+	progression_data["system_name"] = template.get("display_name", "")
+	progression_data["exp_label"] = template.get("exp_label", "")
+	progression_data["stage_label"] = template.get("stage_label", "")
+	progression_data["breakthrough_label"] = template.get("breakthrough_label", "")
+	progression_data["current_realm_id"] = first_realm.get("id", "")
+	progression_data["current_realm_name"] = first_realm.get("name", "")
+	progression_data["current_realm_order"] = int(first_realm.get("order", 0))
+	progression_data["current_stage"] = 0
+	progression_data["current_stage_name"] = str(stages[0]) if stages.size() > 0 else ""
+	progression_data["progress_to_next"] = _progress_to_next_for_realm(first_realm)
+	progression_data["realm_history"] = realm_history
+	progression_data["breakthrough_history"] = breakthrough_history
+	progression_data["tribulation_record"] = tribulation_record
+	progression_data["unlocked_features"] = unlocked_features.keys()
+	progression_data["world_modifiers"] = world_rule_modifiers
+	for feature in first_realm.get("unlock_features", []):
+		unlock_feature(str(feature))
+	GameLog.add_entry("成长体系已初始化: %s" % progression_data["system_name"])
+
+
+func get_progression_summary() -> Dictionary:
+	var summary = progression_data.duplicate(true)
+	summary["unlocked_features"] = unlocked_features.keys()
+	summary["world_modifiers"] = world_rule_modifiers.duplicate(true)
+	summary["realm_history"] = realm_history
+	summary["breakthrough_history"] = breakthrough_history
+	summary["tribulation_record"] = tribulation_record
+	return summary
+
+
+func add_progression_history(entry: Dictionary) -> void:
+	realm_history.append(entry)
+	progression_data["realm_history"] = realm_history
+	log_action("成长记录: %s" % entry.get("stage_name", entry.get("type", "progression")), entry)
+
+
+func add_breakthrough_record(entry: Dictionary) -> void:
+	breakthrough_history.append(entry)
+	progression_data["breakthrough_history"] = breakthrough_history
+	log_action("突破记录: %s" % entry.get("result", "unknown"), entry)
+
+
+func add_tribulation_record(entry: Dictionary) -> void:
+	tribulation_record.append(entry)
+	progression_data["tribulation_record"] = tribulation_record
+	log_action("劫难记录: %s" % entry.get("event", "tribulation"), entry)
+
+
+func unlock_feature(feature_id: String) -> void:
+	if feature_id == "":
+		return
+	unlocked_features[feature_id] = true
+	progression_data["unlocked_features"] = unlocked_features.keys()
+	GameLog.add_entry("解锁能力: %s" % feature_id)
+
+
+func has_feature(feature_id: String) -> bool:
+	return unlocked_features.has(feature_id)
+
+
+func set_world_modifier(modifier_id: String, value) -> void:
+	if modifier_id == "":
+		return
+	world_rule_modifiers[modifier_id] = value
+	progression_data["world_modifiers"] = world_rule_modifiers
+
+
+func get_world_modifier(modifier_id: String, default_value = null):
+	return world_rule_modifiers.get(modifier_id, default_value)
+
+
+func add_progression_points(amount: int, reason: String = "") -> void:
+	progression_data["current_progress"] = int(progression_data.get("current_progress", 0)) + max(0, amount)
+	var label = progression_data.get("exp_label", "成长")
+	if amount > 0:
+		GameLog.add_entry("获得 %d 点%s%s" % [amount, label, ("（%s）" % reason) if reason != "" else ""])
 
 
 ## 记录玩家行动
@@ -250,3 +360,40 @@ func get_active_events() -> Array:
 		if event_states[eid].get("active", false):
 			active.append(eid)
 	return active
+
+
+func _default_progression_data() -> Dictionary:
+	return {
+		"world_type": "",
+		"system_id": "",
+		"system_name": "",
+		"exp_label": "",
+		"stage_label": "",
+		"breakthrough_label": "",
+		"current_realm_id": "",
+		"current_realm_name": "",
+		"current_realm_order": 0,
+		"current_stage": 0,
+		"current_stage_name": "",
+		"current_progress": 0,
+		"progress_to_next": 0,
+		"breakthrough_points": 0,
+		"bottleneck": false,
+		"bottleneck_reason": "",
+		"tribulation_pending": false,
+		"tribulation_type": "",
+		"failed_breakthroughs": 0,
+		"last_breakthrough_result": {},
+		"realm_history": [],
+		"breakthrough_history": [],
+		"tribulation_record": [],
+		"unlocked_features": [],
+		"world_modifiers": {},
+		"special_flags": {}
+	}
+
+
+func _progress_to_next_for_realm(realm: Dictionary) -> int:
+	var stages = max(1, realm.get("minor_stages", []).size())
+	var required = int(realm.get("breakthrough", {}).get("required_progress", 1))
+	return max(1, int(ceil(float(required) / float(stages))))

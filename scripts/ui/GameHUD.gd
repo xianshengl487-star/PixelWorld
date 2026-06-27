@@ -19,6 +19,7 @@ class_name GameHUD
 @onready var _action_result: Label = $ActionResult
 @onready var _status_label: Label = $StatusLabel
 @onready var _inventory_label: Label = $InventoryLabel
+@onready var _progression_label: Label = $ProgressionLabel
 
 var _ai_client = null
 var _player = null
@@ -100,6 +101,51 @@ func _update_hud() -> void:
 		_stamina_bar.value = clampi(stamina, 0, max_stamina)
 	if _inventory_label:
 		_inventory_label.text = _inventory_text()
+	update_progression_display(WorldState.get_progression_summary())
+
+
+func update_progression_display(summary: Dictionary) -> void:
+	if _progression_label == null:
+		return
+	if summary.is_empty() or str(summary.get("system_name", "")) == "":
+		_progression_label.text = "成长: 未初始化"
+		return
+	var progress = int(summary.get("current_progress", 0))
+	var target = int(summary.get("progress_to_next", 0))
+	var text = "%s | %s %s | %s %d / %d" % [
+		summary.get("system_name", "成长"),
+		summary.get("current_realm_name", ""),
+		summary.get("current_stage_name", ""),
+		summary.get("exp_label", "进度"),
+		progress,
+		max(1, target)
+	]
+	if bool(summary.get("bottleneck", false)):
+		text += " | 瓶颈: %s" % summary.get("bottleneck_reason", "需要突破")
+	if bool(summary.get("tribulation_pending", false)):
+		text += " | 试炼: %s 待处理" % summary.get("tribulation_type", "")
+	var features = summary.get("unlocked_features", [])
+	if features is Array and features.size() > 0:
+		text += " | 能力: %s" % ", ".join(features.slice(0, min(3, features.size())))
+	var modifiers = summary.get("world_modifiers", {})
+	if modifiers is Dictionary and modifiers.size() > 0:
+		text += " | 世界影响: %d项" % modifiers.size()
+	_progression_label.text = text
+
+
+func show_breakthrough_result(result: Dictionary) -> void:
+	_set_action_result(str(result.get("message", "突破结果已记录。")))
+	update_progression_display(WorldState.get_progression_summary())
+
+
+func show_tribulation_log(entry: Dictionary) -> void:
+	var text = "试炼第%d轮: 伤害 %d" % [int(entry.get("round_index", 0)), int(entry.get("damage", 0))]
+	_set_action_result(text)
+
+
+func show_unlocked_features(features: Array) -> void:
+	if _status_label:
+		_status_label.text = "已解锁: %s" % ", ".join(features)
 
 
 ## 处理自由行动提交
