@@ -4,6 +4,76 @@
 
 ---
 
+## 2026-06-28 01:56 — v0.4.0 多地图世界架构深化
+
+### 更新类型
+
+地图架构 / 运行时加载 / 存档 / 建筑模板 / 测试 / 文档
+
+### 本次改动
+
+* 新增 `WorldGraph.gd`，用于描述一个世界内的地图拓扑、主线、支线、连接关系和起始地图
+* 新增 `WorldInstance.gd`，作为世界运行时实例的外层容器
+* 新增 `MapInstance.gd`，用于承载单张地图的尺寸、类型、出生点、瓦片、建筑、NPC、敌人、资源、POI 和过图点
+* 新增 `MapTransition.gd` 与 `TransitionArea.gd`，支持从一张地图跳转到另一张地图和目标出生点
+* 新增 `MapState.gd` 与 `MapStateSerializer.gd`，记录并保存每张地图的宝箱、资源、击败敌人、本地 flag 和玩家位置
+* 新增 `MapTypeRuleLoader.gd` 与 `data/map_generation/map_type_rules.json`，为 village/forest/cave/sect_gate/interior/secret_realm 提供地图类型规则
+* 新增 `MapInstanceGenerator.gd`，生成村庄、森林、洞府、宗门山门、室内和秘境地图实例
+* 新增 `MapConnectionValidator.gd`，校验地图图谱、连接和出生点
+* 新增 `BuildingTemplate.gd`、`BuildingInstance.gd`、`BuildingPlacementValidator.gd` 与 `data/buildings/building_templates.json`
+* 扩展 `MockProvider.gd`，默认蓝图现在包含 4 张地图、双向连接、主线与支线信息
+* 扩展 `WorldState.gd`，加入 current_map_id、visited_maps、map_states、world_graph_data、global_flags、player_position_by_map 和 last_spawn_id
+* 扩展 `SaveManager.gd`，保存和读取多地图相关字段，并兼容旧存档缺失字段
+* 重写/扩展 `GameWorld.gd`，支持 `setup_world_graph_from_blueprint()`、`load_map()`、`switch_map()`、地图卸载、状态恢复、分层渲染、建筑层和过图层
+* 保留旧 64x64 地图生成与旧测试路径，没有删除 T025/T028
+* 扩展 `SmokeTestRunner.gd`，新增 T116-T155 覆盖 v0.4.0 多地图架构
+* 更新项目版本、主菜单版本号、README、测试报告，并新增 `GAMEPLAY_MAP_ARCHITECTURE.md`
+
+### 涉及文件
+
+* `res://project.godot`
+* `res://scenes/MainMenu.tscn`
+* `res://scenes/GameWorld.tscn`
+* `res://scripts/ai/providers/MockProvider.gd`
+* `res://scripts/core/WorldState.gd`
+* `res://scripts/core/SaveManager.gd`
+* `res://scripts/ui/GameWorld.gd`
+* `res://scripts/map/...`
+* `res://scripts/world/WorldGraph.gd`
+* `res://scripts/world/WorldInstance.gd`
+* `res://scripts/buildings/...`
+* `res://data/map_generation/map_type_rules.json`
+* `res://data/buildings/building_templates.json`
+* `res://scripts/tests/SmokeTestRunner.gd`
+* `res://GAMEPLAY_MAP_ARCHITECTURE.md`
+* `res://README.md`
+* `res://TEST_REPORT.md`
+* `res://DEV_LOG.md`
+
+### 原因
+
+v0.4.0 需要先把“一个世界由多张地图组成”的底座立住，后续才能自然接入城镇、野外、洞府、宗门、室内、秘境、跨地图任务、地图状态持久化和成长门槛。当前版本优先保证结构清晰、旧系统兼容和 CLI 可验证，不提前迁移 TileMapLayer、不接真实 AI、不做无限地图。
+
+### 测试结果
+
+* JSON 配置解析：PASS
+* Godot 4.7 CLI 编译验证：PASS
+* SmokeTestRunner：136/137 PASS
+* 新增 T116-T155：40/40 PASS
+* 保留失败项：T025，仍作为 CLI headless SceneTree/初始化待编辑器 F5 验证项
+* T028：本轮 CLI 通过
+* 编辑器 F5 手动验证：未执行
+
+### 后续待办
+
+* 在 Godot 编辑器中 F5 验证玩家实际移动、碰撞、HUD、NPC 互动和跨地图切换体验
+* 给 TransitionArea 增加更完整的交互提示和锁定反馈
+* 将建筑门口与 interior 类型地图建立更明确的数据连接
+* 逐步把 ColorRect 地图占位替换为 generated tiles 或 TileSet/TileMapLayer 方案
+* 把境界、任务和物品条件接入更多过图/建筑访问规则
+
+---
+
 ## 2026-06-28 01:35 — v0.3.0 代码审查与世界观成长体系
 
 ### 更新类型

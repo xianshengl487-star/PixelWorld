@@ -4,6 +4,7 @@ extends Node
 
 const InventoryClass = preload("res://scripts/items/Inventory.gd")
 const ProgressionTemplateLoaderClass = preload("res://scripts/progression/ProgressionTemplateLoader.gd")
+const WorldGraphClass = preload("res://scripts/world/WorldGraph.gd")
 
 # ============================================
 # 世界蓝图
@@ -11,6 +12,15 @@ const ProgressionTemplateLoaderClass = preload("res://scripts/progression/Progre
 var world_blueprint: Dictionary = {}
 var world_name: String = ""
 var world_type: String = ""
+var current_world_instance = null
+var current_world_graph = null
+var current_map_id: String = ""
+var visited_maps: Dictionary = {}
+var map_states: Dictionary = {}
+var world_graph_data: Dictionary = {}
+var global_flags: Dictionary = {}
+var player_position_by_map: Dictionary = {}
+var last_spawn_id: String = "default"
 
 # ============================================
 # 时间系统
@@ -72,6 +82,15 @@ func reset_state() -> void:
 	world_blueprint = {}
 	world_name = ""
 	world_type = ""
+	current_world_instance = null
+	current_world_graph = null
+	current_map_id = ""
+	visited_maps.clear()
+	map_states.clear()
+	world_graph_data = {}
+	global_flags.clear()
+	player_position_by_map.clear()
+	last_spawn_id = "default"
 	current_day = 1
 	current_hour = 8
 	player_reputation = 0
@@ -105,6 +124,10 @@ func set_world_blueprint(blueprint: Dictionary) -> void:
 	world_blueprint = blueprint
 	world_name = blueprint.get("world_name", "未知世界")
 	world_type = blueprint.get("world_type", "unknown")
+	_setup_world_graph_data(blueprint)
+	current_map_id = blueprint.get("start_map_id", current_map_id)
+	if current_map_id != "":
+		mark_map_visited(current_map_id)
 	current_region = blueprint.get("start_region", "")
 	player_position = Vector2(
 		blueprint.get("player_spawn", {}).get("x", 20),
@@ -133,6 +156,45 @@ func set_world_blueprint(blueprint: Dictionary) -> void:
 	var template = ProgressionTemplateLoaderClass.new().load_template(world_type)
 	if not template.is_empty():
 		init_progression(world_type, template)
+
+
+func get_world_graph():
+	if current_world_graph == null and not world_graph_data.is_empty():
+		current_world_graph = WorldGraphClass.new()
+		current_world_graph.setup(world_graph_data)
+	return current_world_graph
+
+
+func set_world_graph(graph) -> void:
+	current_world_graph = graph
+	world_graph_data = graph.to_save_data() if graph != null and graph.has_method("to_save_data") else {}
+
+
+func mark_map_visited(map_id: String) -> void:
+	if map_id != "":
+		visited_maps[map_id] = true
+
+
+func is_map_visited(map_id: String) -> bool:
+	return bool(visited_maps.get(map_id, false))
+
+
+func get_map_state(map_id: String) -> Dictionary:
+	return map_states.get(map_id, {}).duplicate(true)
+
+
+func set_map_state(map_id: String, state: Dictionary) -> void:
+	if map_id != "":
+		map_states[map_id] = state.duplicate(true)
+
+
+func set_current_map_id(map_id: String, spawn_id: String = "default") -> void:
+	current_map_id = map_id
+	last_spawn_id = spawn_id
+	mark_map_visited(map_id)
+	if current_world_graph != null and current_world_graph.has_method("set_current_map"):
+		current_world_graph.set_current_map(map_id)
+		world_graph_data = current_world_graph.to_save_data()
 
 
 ## 初始化世界观成长体系
@@ -397,3 +459,13 @@ func _progress_to_next_for_realm(realm: Dictionary) -> int:
 	var stages = max(1, realm.get("minor_stages", []).size())
 	var required = int(realm.get("breakthrough", {}).get("required_progress", 1))
 	return max(1, int(ceil(float(required) / float(stages))))
+
+
+func _setup_world_graph_data(blueprint: Dictionary) -> void:
+	if not blueprint.has("maps") or not blueprint.has("connections"):
+		world_graph_data = {}
+		current_world_graph = null
+		return
+	current_world_graph = WorldGraphClass.new()
+	current_world_graph.setup(blueprint)
+	world_graph_data = current_world_graph.to_save_data()

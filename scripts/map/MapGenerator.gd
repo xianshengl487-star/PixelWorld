@@ -145,6 +145,37 @@ func generate(blueprint: Dictionary) -> Dictionary:
 	}
 
 
+func generate_map(width: int, height: int, context: Dictionary = {}) -> Dictionary:
+	var tiles: Array = []
+	var walkable: Array = []
+	width = max(8, width)
+	height = max(8, height)
+	var map_type = str(context.get("map_type", "village"))
+	var locked_paths = context.get("locked_path_tiles", {})
+	for y in range(height):
+		var row: Array = []
+		var walk_row: Array = []
+		for x in range(width):
+			var tile = _base_tile_for_type(map_type)
+			if x == 0 or y == 0 or x == width - 1 or y == height - 1:
+				tile = TileType.MOUNTAIN if map_type != "interior" else TileType.HOUSE
+			row.append(tile)
+			walk_row.append(tile in WALKABLE_TILES)
+		tiles.append(row)
+		walkable.append(walk_row)
+	_generate_dynamic_content(tiles, walkable, map_type, locked_paths)
+	return {"tiles": tiles, "walkable": walkable, "width": width, "height": height}
+
+
+func generate_map_from_instance(map_instance) -> Dictionary:
+	var context = {
+		"map_type": map_instance.map_type,
+		"world_type": map_instance.world_type,
+		"locked_path_tiles": map_instance.locked_path_tiles
+	}
+	return generate_map(map_instance.size.x, map_instance.size.y, context)
+
+
 ## 强制修路（不受已有地形影响，直接覆盖为道路）
 func _carve_road(tiles: Array, walkable: Array, x1: int, y1: int, x2: int, y2: int) -> void:
 	var dx = abs(x2 - x1)
@@ -290,3 +321,88 @@ func _normalize_areas(areas: Array) -> Array:
 static func is_walkable(walkable_data: Array, x: int, y: int) -> bool:
 	if x < 0 or x >= MAP_WIDTH or y < 0 or y >= MAP_HEIGHT: return false
 	return walkable_data[y][x]
+
+
+func _base_tile_for_type(map_type: String) -> int:
+	match map_type:
+		"cave", "dungeon":
+			return TileType.CAVE
+		"sect_gate", "sect_inner":
+			return TileType.SECT_FLOOR
+		"interior", "house", "shop":
+			return TileType.SECT_FLOOR
+		_:
+			return TileType.GRASS
+
+
+func _generate_dynamic_content(tiles: Array, walkable: Array, map_type: String, locked_paths: Dictionary) -> void:
+	var height = tiles.size()
+	var width = tiles[0].size() if height > 0 else 0
+	var center = Vector2i(width / 2, height / 2)
+	_carve_dynamic_road(tiles, walkable, center.x, center.y, max(2, width - 3), center.y, locked_paths)
+	_carve_dynamic_road(tiles, walkable, center.x, center.y, center.x, max(2, height - 3), locked_paths)
+	_carve_dynamic_road(tiles, walkable, center.x, center.y, 2, center.y, locked_paths)
+	match map_type:
+		"forest":
+			_scatter_dynamic(tiles, walkable, TileType.TREE, 35, locked_paths)
+			_scatter_dynamic(tiles, walkable, TileType.WATER, 3, locked_paths)
+		"cave", "dungeon":
+			_scatter_dynamic(tiles, walkable, TileType.MOUNTAIN, 20, locked_paths)
+			_carve_dynamic_road(tiles, walkable, 2, center.y, width - 3, center.y, locked_paths)
+		"sect_gate":
+			_scatter_dynamic(tiles, walkable, TileType.MOUNTAIN, 10, locked_paths)
+			for x in range(max(1, center.x - 8), min(width - 1, center.x + 9)):
+				for y in range(max(1, center.y - 4), min(height - 1, center.y + 5)):
+					tiles[y][x] = TileType.SECT_FLOOR
+					walkable[y][x] = true
+		"interior", "house", "shop":
+			for y in range(height):
+				for x in range(width):
+					var wall = x < 2 or y < 2 or x >= width - 2 or y >= height - 2
+					tiles[y][x] = TileType.HOUSE if wall else TileType.SECT_FLOOR
+					walkable[y][x] = not wall
+			tiles[height - 2][center.x] = TileType.ROAD
+			walkable[height - 2][center.x] = true
+		"secret_realm":
+			_scatter_dynamic(tiles, walkable, TileType.WATER, 8, locked_paths)
+			_scatter_dynamic(tiles, walkable, TileType.MOUNTAIN, 12, locked_paths)
+		_:
+			_scatter_dynamic(tiles, walkable, TileType.HOUSE, 3, locked_paths)
+
+
+func _carve_dynamic_road(tiles: Array, walkable: Array, x1: int, y1: int, x2: int, y2: int, locked_paths: Dictionary) -> void:
+	var width = tiles[0].size()
+	var height = tiles.size()
+	var dx = abs(x2 - x1)
+	var dy = -abs(y2 - y1)
+	var sx = 1 if x1 < x2 else -1
+	var sy = 1 if y1 < y2 else -1
+	var err = dx + dy
+	var cx = x1
+	var cy = y1
+	while true:
+		if cx >= 0 and cx < width and cy >= 0 and cy < height:
+			tiles[cy][cx] = TileType.ROAD
+			walkable[cy][cx] = true
+			locked_paths["%d,%d" % [cx, cy]] = true
+		if cx == x2 and cy == y2:
+			break
+		var e2 = 2 * err
+		if e2 >= dy:
+			err += dy
+			cx += sx
+		if e2 <= dx:
+			err += dx
+			cy += sy
+
+
+func _scatter_dynamic(tiles: Array, walkable: Array, tile_type: int, chance_percent: int, locked_paths: Dictionary) -> void:
+	var height = tiles.size()
+	var width = tiles[0].size() if height > 0 else 0
+	for y in range(2, height - 2):
+		for x in range(2, width - 2):
+			if locked_paths.get("%d,%d" % [x, y], false):
+				continue
+			if _rand() % 100 < chance_percent and tiles[y][x] in WALKABLE_TILES:
+				tiles[y][x] = tile_type
+				walkable[y][x] = tile_type in WALKABLE_TILES

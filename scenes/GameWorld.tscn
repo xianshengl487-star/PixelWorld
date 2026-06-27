@@ -10,9 +10,27 @@ script = ExtResource("1_world_script")
 
 [node name="TileMap" type="Node2D" parent="."]
 
+[node name="MapRoot" type="Node2D" parent="."]
+
+[node name="GroundLayer" type="Node2D" parent="."]
+
+[node name="DecorationLayer" type="Node2D" parent="."]
+
+[node name="BuildingLayer" type="Node2D" parent="."]
+
+[node name="EntityLayer" type="Node2D" parent="."]
+
+[node name="InteractionLayer" type="Node2D" parent="."]
+
+[node name="TransitionLayer" type="Node2D" parent="."]
+
 [node name="NPCLayer" type="Node2D" parent="."]
 
 [node name="CollisionLayer" type="Node2D" parent="."]
+
+[node name="EnemyLayer" type="Node2D" parent="."]
+
+[node name="InteractableLayer" type="Node2D" parent="."]
 
 [node name="Player" parent="." instance=ExtResource("2_player_scene")]
 

@@ -31,14 +31,14 @@ func generate_world_blueprint(prompt: String) -> Dictionary:
 	var world_type = _detect_world_type(prompt)
 	
 	if _default_blueprints.has(world_type):
-		return _default_blueprints[world_type].duplicate(true)
+		return _ensure_multimap_blueprint(_default_blueprints[world_type].duplicate(true))
 	
 	# 返回第一个可用的蓝图
 	for key in _default_blueprints:
-		return _default_blueprints[key].duplicate(true)
+		return _ensure_multimap_blueprint(_default_blueprints[key].duplicate(true))
 	
 	# 最后的保底
-	return _get_fallback_blueprint()
+	return _ensure_multimap_blueprint(_get_fallback_blueprint())
 
 
 ## 从提示词检测世界类型
@@ -196,3 +196,31 @@ func _get_fallback_blueprint() -> Dictionary:
 			"connections": [["village", "forest"], ["forest", "cave"], ["forest", "mountain"]]
 		}
 	}
+
+
+func _ensure_multimap_blueprint(blueprint: Dictionary) -> Dictionary:
+	if not blueprint.has("seed"):
+		blueprint["seed"] = abs(str(blueprint.get("world_name", "PixelWorld")).hash())
+	if not blueprint.has("start_map_id"):
+		blueprint["start_map_id"] = "village_001"
+	if not blueprint.has("maps") or not (blueprint["maps"] is Array) or blueprint["maps"].is_empty():
+		blueprint["maps"] = [
+			{"map_id": "village_001", "display_name": "青木村", "map_type": "village", "size": [96, 96], "danger_level": 0},
+			{"map_id": "forest_001", "display_name": "黑松后山", "map_type": "forest", "size": [128, 128], "danger_level": 2},
+			{"map_id": "cave_001", "display_name": "残破洞府", "map_type": "cave", "size": [64, 64], "danger_level": 3},
+			{"map_id": "sect_gate_001", "display_name": "云岚宗山门", "map_type": "sect_gate", "size": [128, 128], "danger_level": 1}
+		]
+	if not blueprint.has("connections") or not (blueprint["connections"] is Array) or blueprint["connections"].is_empty():
+		blueprint["connections"] = [
+			{"connection_id": "village_to_forest", "from_map_id": "village_001", "to_map_id": "forest_001", "connection_type": "edge_exit", "from_spawn_id": "east_exit", "to_spawn_id": "from_village"},
+			{"connection_id": "forest_to_village", "from_map_id": "forest_001", "to_map_id": "village_001", "connection_type": "edge_exit", "from_spawn_id": "from_village", "to_spawn_id": "from_forest"},
+			{"connection_id": "forest_to_cave", "from_map_id": "forest_001", "to_map_id": "cave_001", "connection_type": "cave_entrance", "from_spawn_id": "cave_entry", "to_spawn_id": "entrance"},
+			{"connection_id": "cave_to_forest", "from_map_id": "cave_001", "to_map_id": "forest_001", "connection_type": "cave_entrance", "from_spawn_id": "entrance", "to_spawn_id": "from_cave"},
+			{"connection_id": "forest_to_sect_gate", "from_map_id": "forest_001", "to_map_id": "sect_gate_001", "connection_type": "sect_gate", "from_spawn_id": "sect_road", "to_spawn_id": "from_forest", "required_realm_order": 0, "locked_message": "守门弟子拦住了你。"},
+			{"connection_id": "sect_gate_to_forest", "from_map_id": "sect_gate_001", "to_map_id": "forest_001", "connection_type": "sect_gate", "from_spawn_id": "from_forest", "to_spawn_id": "from_sect_gate"}
+		]
+	if not blueprint.has("main_path"):
+		blueprint["main_path"] = ["village_001", "forest_001", "sect_gate_001"]
+	if not blueprint.has("side_paths"):
+		blueprint["side_paths"] = [["forest_001", "cave_001"]]
+	return blueprint

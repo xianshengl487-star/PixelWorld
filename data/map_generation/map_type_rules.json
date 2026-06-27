@@ -1,0 +1,53 @@
+{
+	"village": {
+		"default_size": [96, 96],
+		"danger_level": 0,
+		"terrain_weights": {"grass": 0.5, "road": 0.2, "tree": 0.1, "water": 0.05, "building_floor": 0.15},
+		"building_budget": [3, 6],
+		"npc_budget": [3, 8],
+		"enemy_budget": [0, 1],
+		"resource_budget": {"herb": [1, 3], "wood": [1, 3]},
+		"poi_budget": {"sign_board": [1, 1], "well": [1, 1], "chest": [0, 1]}
+	},
+	"forest": {
+		"default_size": [128, 128],
+		"danger_level": 2,
+		"terrain_weights": {"grass": 0.35, "tree": 0.45, "road": 0.08, "water": 0.05, "mountain": 0.07},
+		"enemy_budget": [3, 8],
+		"resource_budget": {"herb": [4, 8], "wood": [4, 8], "spirit_grass": [1, 2]},
+		"poi_budget": {"ancient_stele": [0, 1], "hidden_cache": [1, 2], "trap_area": [1, 3]}
+	},
+	"cave": {
+		"default_size": [64, 64],
+		"danger_level": 3,
+		"terrain_weights": {"cave_floor": 0.55, "wall": 0.25, "ore": 0.08, "water": 0.03, "road": 0.09},
+		"enemy_budget": [3, 6],
+		"resource_budget": {"ore": [2, 5], "spirit_stone": [1, 2]},
+		"poi_budget": {"treasure_chest": [1, 3], "trap_area": [1, 3]}
+	},
+	"sect_gate": {
+		"default_size": [128, 128],
+		"danger_level": 1,
+		"terrain_weights": {"stone_step": 0.25, "sect_floor": 0.25, "grass": 0.25, "mountain": 0.15, "tree": 0.1},
+		"npc_budget": [3, 6],
+		"building_budget": [2, 5],
+		"enemy_budget": [0, 2],
+		"poi_budget": {"sect_gate": [1, 1], "task_board": [1, 1], "trial_entry": [0, 1]}
+	},
+	"interior": {
+		"default_size": [32, 32],
+		"danger_level": 0,
+		"terrain_weights": {"floor": 0.78, "wall": 0.18, "counter": 0.04},
+		"npc_budget": [0, 2],
+		"enemy_budget": [0, 0],
+		"poi_budget": {"exit": [1, 1], "counter": [0, 1]}
+	},
+	"secret_realm": {
+		"default_size": [96, 96],
+		"danger_level": 5,
+		"terrain_weights": {"grass": 0.25, "road": 0.08, "tree": 0.18, "water": 0.12, "mountain": 0.2, "spirit_floor": 0.17},
+		"enemy_budget": [4, 8],
+		"resource_budget": {"spirit_grass": [3, 6], "spirit_stone": [2, 4]},
+		"poi_budget": {"treasure_chest": [2, 4], "boss_lair": [1, 1], "ancient_stele": [1, 2]}
+	}
+}

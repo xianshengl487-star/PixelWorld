@@ -1,6 +1,7 @@
 extends Node
 ## SaveManager.gd — JSON 存档/读档 Autoload
 
+const MapStateSerializerClass = preload("res://scripts/map/MapStateSerializer.gd")
 const SAVE_DIR := "user://saves"
 
 
@@ -51,6 +52,7 @@ func _slot_path(slot_id: String) -> String:
 
 
 func _collect_save_data() -> Dictionary:
+	var serializer = MapStateSerializerClass.new()
 	return {
 		"world_name": WorldState.world_name,
 		"world_type": WorldState.world_type,
@@ -74,7 +76,13 @@ func _collect_save_data() -> Dictionary:
 		"breakthrough_history": WorldState.breakthrough_history,
 		"tribulation_record": WorldState.tribulation_record,
 		"progression_template_id": WorldState.progression_data.get("system_id", ""),
-		"progression_world_type": WorldState.progression_data.get("world_type", WorldState.world_type)
+		"progression_world_type": WorldState.progression_data.get("world_type", WorldState.world_type),
+		"current_map_id": WorldState.current_map_id,
+		"visited_maps": WorldState.visited_maps,
+		"map_states": serializer.serialize_all_map_states(WorldState.map_states),
+		"world_graph": WorldState.world_graph_data if not WorldState.world_graph_data.is_empty() else (WorldState.current_world_graph.to_save_data() if WorldState.current_world_graph != null and WorldState.current_world_graph.has_method("to_save_data") else {}),
+		"player_position_by_map": WorldState.player_position_by_map,
+		"last_spawn_id": WorldState.last_spawn_id
 	}
 
 
@@ -112,3 +120,19 @@ func _apply_save_data(data: Dictionary) -> void:
 	WorldState.progression_data["realm_history"] = WorldState.realm_history
 	WorldState.progression_data["breakthrough_history"] = WorldState.breakthrough_history
 	WorldState.progression_data["tribulation_record"] = WorldState.tribulation_record
+	WorldState.current_map_id = str(data.get("current_map_id", WorldState.world_blueprint.get("start_map_id", "")))
+	var visited_data = data.get("visited_maps", {})
+	WorldState.visited_maps = visited_data if visited_data is Dictionary else {}
+	WorldState.map_states = MapStateSerializerClass.new().deserialize_all_map_states(data.get("map_states", {}))
+	var graph_data = data.get("world_graph", {})
+	WorldState.world_graph_data = graph_data if graph_data is Dictionary else {}
+	if WorldState.world_graph_data.is_empty() and not WorldState.world_blueprint.is_empty() and WorldState.world_blueprint.has("maps"):
+		var graph = preload("res://scripts/world/WorldGraph.gd").new()
+		graph.setup(WorldState.world_blueprint)
+		WorldState.set_world_graph(graph)
+	WorldState.player_position_by_map = data.get("player_position_by_map", {})
+	WorldState.last_spawn_id = str(data.get("last_spawn_id", "default"))
+	if WorldState.current_map_id == "" and not WorldState.world_blueprint.is_empty():
+		WorldState.current_map_id = str(WorldState.world_blueprint.get("start_map_id", ""))
+	if WorldState.current_map_id != "":
+		WorldState.mark_map_visited(WorldState.current_map_id)

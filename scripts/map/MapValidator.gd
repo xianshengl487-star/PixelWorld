@@ -15,6 +15,8 @@ func validate(map_data: Dictionary, blueprint: Dictionary) -> Dictionary:
 	var errors: Array = []
 	var warnings: Array = []
 	var walkable = map_data.get("walkable", [])
+	var width = int(map_data.get("width", walkable[0].size() if walkable.size() > 0 else MAP_WIDTH))
+	var height = int(map_data.get("height", walkable.size() if walkable.size() > 0 else MAP_HEIGHT))
 	
 	if walkable.size() == 0:
 		errors.append("地图数据为空")
@@ -25,7 +27,7 @@ func validate(map_data: Dictionary, blueprint: Dictionary) -> Dictionary:
 	var sp_x = int(spawn.get("x", 20))
 	var sp_y = int(spawn.get("y", 20))
 	
-	if not _is_walkable(walkable, sp_x, sp_y):
+	if not _is_walkable(walkable, sp_x, sp_y, width, height):
 		errors.append("出生点 (%d, %d) 不可行走" % [sp_x, sp_y])
 	
 	# 2. 检查所有 NPC 是否在可行走地块
@@ -41,7 +43,7 @@ func validate(map_data: Dictionary, blueprint: Dictionary) -> Dictionary:
 	for npc in all_npcs:
 		var nx = int(npc.get("x", 0))
 		var ny = int(npc.get("y", 0))
-		if not _is_walkable(walkable, nx, ny):
+		if not _is_walkable(walkable, nx, ny, width, height):
 			npc_positions_not_walkable.append({"id": npc.get("id", ""), "name": npc.get("name", ""), "x": nx, "y": ny})
 	
 	if npc_positions_not_walkable.size() > 0:
@@ -51,7 +53,7 @@ func validate(map_data: Dictionary, blueprint: Dictionary) -> Dictionary:
 	# 3. 可达性检查
 	var reachable_targets = _collect_reachable_targets(blueprint)
 	for target in reachable_targets:
-		if not _path_exists(walkable, sp_x, sp_y, target.x, target.y):
+		if not _path_exists(walkable, sp_x, sp_y, target.x, target.y, width, height):
 			errors.append("出生点到 '%s' (%d, %d) 路径不可达" % [target.name, target.x, target.y])
 	
 	# 4. 关键地点是否在障碍物上
@@ -60,12 +62,12 @@ func validate(map_data: Dictionary, blueprint: Dictionary) -> Dictionary:
 	
 	# 5. 检查是否有足够多的可行走区域
 	var walkable_count = 0
-	for y in range(MAP_HEIGHT):
-		for x in range(MAP_WIDTH):
-			if walkable[y][x]:
+	for y in range(height):
+		for x in range(width):
+			if y < walkable.size() and x < walkable[y].size() and walkable[y][x]:
 				walkable_count += 1
 	
-	var total = MAP_WIDTH * MAP_HEIGHT
+	var total = max(1, width * height)
 	var walkable_ratio = float(walkable_count) / float(total)
 	if walkable_ratio < 0.3:
 		warnings.append("可行走区域占比过低 (%.1f%%)" % (walkable_ratio * 100))
@@ -116,14 +118,18 @@ func _collect_reachable_targets(blueprint: Dictionary) -> Array:
 
 
 ## 检查两点间是否存在路径（BFS）
-func _path_exists(walkable: Array, from_x: int, from_y: int, to_x: int, to_y: int) -> bool:
+func _path_exists(walkable: Array, from_x: int, from_y: int, to_x: int, to_y: int, width: int = MAP_WIDTH, height: int = MAP_HEIGHT) -> bool:
 	if from_x == to_x and from_y == to_y:
 		return true
+	if not _is_walkable(walkable, from_x, from_y, width, height):
+		return false
+	if not _is_walkable(walkable, to_x, to_y, width, height):
+		return false
 	
 	var visited: Array = []
-	for y in range(MAP_HEIGHT):
+	for y in range(height):
 		var row: Array = []
-		for x in range(MAP_WIDTH):
+		for x in range(width):
 			row.append(false)
 		visited.append(row)
 	
@@ -144,7 +150,7 @@ func _path_exists(walkable: Array, from_x: int, from_y: int, to_x: int, to_y: in
 			var nx = cx + dir[0]
 			var ny = cy + dir[1]
 			
-			if nx < 0 or nx >= MAP_WIDTH or ny < 0 or ny >= MAP_HEIGHT:
+			if nx < 0 or nx >= width or ny < 0 or ny >= height:
 				continue
 			if visited[ny][nx]:
 				continue
@@ -158,7 +164,9 @@ func _path_exists(walkable: Array, from_x: int, from_y: int, to_x: int, to_y: in
 
 
 ## 获取可行走地块
-func _is_walkable(walkable: Array, x: int, y: int) -> bool:
-	if x < 0 or x >= MAP_WIDTH or y < 0 or y >= MAP_HEIGHT:
+func _is_walkable(walkable: Array, x: int, y: int, width: int = MAP_WIDTH, height: int = MAP_HEIGHT) -> bool:
+	if x < 0 or x >= width or y < 0 or y >= height:
+		return false
+	if y >= walkable.size() or x >= walkable[y].size():
 		return false
 	return walkable[y][x]

@@ -2,17 +2,46 @@
 
 ## 最新测试结论
 
-- **当前版本**: v0.3.0
-- **测试时间**: 2026-06-28 01:35
+- **当前版本**: v0.4.0
+- **测试时间**: 2026-06-28 01:56
 - **Godot 版本**: 4.7.stable.official.5b4e0cb0f
 - **测试方式**: CLI headless (`--script res://scripts/tests/SmokeTestRunner.gd`)
-- **JSON 模板解析**: PASS
+- **JSON 配置解析**: PASS
 - **git diff --check**: PASS
 - **CLI 编译验证**: PASS（退出码 0）
-- **SmokeTestRunner**: 96/97 PASS (99.0%)
-- **新增 v0.3.0 测试**: T081-T115 全部 PASS
+- **SmokeTestRunner**: 136/137 PASS (99.3%)
+- **新增 v0.4.0 测试**: T116-T155 全部 PASS
+- **保留旧测试状态**: T025 仍为 FAIL；T028 本轮 PASS
 - **编辑器手动验证**: 未执行（需手动打开 Godot F5 运行）
-- **总体结论**: 部分通过 — v0.3.0 代码审查、资产解析 fallback、成长系统模板、Stats 重构、WorldState/Save/HUD 扩展和新增测试全部完成；T025 仍需编辑器 F5 验证。
+- **总体结论**: 部分通过 — v0.4.0 多地图世界架构、地图切换、每地图状态、建筑模板、保存字段和新增测试已经完成；T025 继续保留为 CLI headless SceneTree/初始化待编辑器 F5 验证项，未标记为修复。
+
+## v0.4.0 新增验证重点
+
+* `WorldGraph` 可创建、可从 Mock 蓝图载入至少 4 张地图，并通过主线连通性校验
+* `MapInstance` 有 map_id、display_name、map_type、size 和 default spawn
+* `MapTransition` 可创建，并能根据 `required_realm_order` 阻止不满足条件的过图
+* `MapState` 可记录 opened_chests、collected_resources、defeated_enemies
+* `MapStateSerializer` 可序列化/反序列化全部地图状态
+* `MapTypeRuleLoader` 可加载 `data/map_generation/map_type_rules.json`
+* `MapInstanceGenerator` 可生成 village 与 forest，默认尺寸分别为 96x96 和 128x128
+* `MockProvider` 生成的 blueprint 包含 `maps` 与 `connections`
+* `MapConnectionValidator` 可检查默认 WorldGraph
+* `GameWorld` 可 setup WorldGraph、load_map、switch_map，并在切图后更新 current_map_id 和玩家出生点
+* `SaveManager` 可保存/读取 current_map_id、visited_maps、map_states
+* `BuildingTemplate`、`BuildingInstance`、`BuildingPlacementValidator` 可创建并校验建筑 footprint 越界
+* `GameWorld` 有 `BuildingLayer` 和 `TransitionLayer`
+* `GAMEPLAY_MAP_ARCHITECTURE.md` 存在
+* `README.md` 已更新 v0.4.0、玩法路线图、WorldGraph 与 MapInstance 说明
+
+## v0.4.0 CLI 冒烟测试汇总
+
+| 范围 | 结果 | 备注 |
+|---|---:|---|
+| T001-T062 | 61/62 PASS | T025 失败；T028 本轮 PASS |
+| T063-T080 | N/A | SmokeTestRunner 当前未定义这些编号 |
+| T081-T115 | 35/35 PASS | v0.3.0 成长体系测试继续通过 |
+| T116-T155 | 40/40 PASS | v0.4.0 多地图架构测试全部通过 |
+| 实际运行总数 | 136/137 PASS | SmokeTestRunner 实际执行 137 项 |
 
 ## v0.3.0 新增验证重点
 

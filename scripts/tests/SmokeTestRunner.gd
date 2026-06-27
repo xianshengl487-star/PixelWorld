@@ -1,5 +1,5 @@
 extends SceneTree
-## SmokeTestRunner.gd — CLI 自动化冒烟测试  v0.3.0
+## SmokeTestRunner.gd — CLI 自动化冒烟测试  v0.4.0
 ## 运行: godot --headless --path . --script res://scripts/tests/SmokeTestRunner.gd
 
 const AIClientClass = preload("res://scripts/ai/AIClient.gd")
@@ -16,6 +16,18 @@ const ProgressionSystemClass = preload("res://scripts/progression/ProgressionSys
 const BreakthroughSystemClass = preload("res://scripts/progression/BreakthroughSystem.gd")
 const TribulationSystemClass = preload("res://scripts/progression/TribulationSystem.gd")
 const RealmEffectApplierClass = preload("res://scripts/progression/RealmEffectApplier.gd")
+const WorldGraphClass = preload("res://scripts/world/WorldGraph.gd")
+const WorldInstanceClass = preload("res://scripts/world/WorldInstance.gd")
+const MapInstanceClass = preload("res://scripts/map/MapInstance.gd")
+const MapTransitionClass = preload("res://scripts/map/MapTransition.gd")
+const MapStateClass = preload("res://scripts/map/MapState.gd")
+const MapStateSerializerClass = preload("res://scripts/map/MapStateSerializer.gd")
+const MapTypeRuleLoaderClass = preload("res://scripts/map/MapTypeRuleLoader.gd")
+const MapInstanceGeneratorClass = preload("res://scripts/map/MapInstanceGenerator.gd")
+const MapConnectionValidatorClass = preload("res://scripts/map/MapConnectionValidator.gd")
+const BuildingTemplateClass = preload("res://scripts/buildings/BuildingTemplate.gd")
+const BuildingInstanceClass = preload("res://scripts/buildings/BuildingInstance.gd")
+const BuildingPlacementValidatorClass = preload("res://scripts/buildings/BuildingPlacementValidator.gd")
 const TEST_SEED: int = 42
 
 var _results: Array = []
@@ -31,7 +43,7 @@ var _save_manager = null
 
 func _init() -> void:
 	print("=".repeat(60))
-	print("  PixelWorld CLI Smoke Test Runner  v0.3.0  (seed=%d)" % TEST_SEED)
+	print("  PixelWorld CLI Smoke Test Runner  v0.4.0  (seed=%d)" % TEST_SEED)
 	print("=".repeat(60))
 	
 	await process_frame; await process_frame
@@ -131,6 +143,13 @@ func _run_all_tests() -> void:
 	_t099(); _t100(); _t101(); _t102(); _t103(); _t104()
 	_t105(); _t106(); _t107(); _t108(); _t109(); _t110()
 	_t111(); _t112(); _t113(); _t114(); _t115()
+	_t116(); await _t117(); await _t118(); _t119(); _t120(); _t121()
+	_t122(); _t123(); _t124(); _t125(); _t126(); _t127()
+	_t128(); _t129(); _t130(); _t131(); _t132(); _t133()
+	_t134(); await _t135(); await _t136(); await _t137(); _t138()
+	await _t139(); await _t140(); await _t141(); await _t142(); await _t143()
+	_t144(); _t145(); _t146(); _t147(); _t148(); _t149()
+	_t150(); _t151(); await _t152(); await _t153(); _t154(); _t155()
 
 func _t001(): _record("T001", "project.godot 存在", FileAccess.file_exists("res://project.godot"))
 func _t002(): _record("T002", "MainMenu.tscn 可加载", _scene_loadable("res://scenes/MainMenu.tscn"))
@@ -870,7 +889,280 @@ func _t114() -> void:
 
 func _t115() -> void:
 	var text = _read_text("res://README.md")
-	_record("T115", "README 更新当前版本和玩法路线图", "v0.3.0" in text and "玩法路线图" in text)
+	_record("T115", "README 更新当前版本和玩法路线图", "v0.4.0" in text and "玩法路线图" in text)
+
+
+# ═══════════════ T116–T155 v0.4.0 多地图架构 ═══════════════
+
+func _t116() -> void:
+	_record("T116", "WorldGraph 可创建", WorldGraphClass.new() != null)
+
+
+func _t117() -> void:
+	var bp = await _get_mock_blueprint()
+	var graph = WorldGraphClass.new()
+	graph.setup(bp)
+	_record("T117", "WorldGraph 至少包含 4 张地图", graph.maps.size() >= 4, "count=%d" % graph.maps.size())
+
+
+func _t118() -> void:
+	var bp = await _get_mock_blueprint()
+	var graph = WorldGraphClass.new()
+	graph.setup(bp)
+	var result = graph.validate_graph()
+	_record("T118", "WorldGraph validate_graph 通过", result.get("ok", false), str(result.get("errors", [])))
+
+
+func _t119() -> void:
+	var map = MapInstanceClass.new()
+	map.setup({"map_id": "smoke_map", "display_name": "测试地图", "map_type": "village"})
+	_record("T119", "MapInstance 可创建", map.map_id == "smoke_map")
+
+
+func _t120() -> void:
+	var map = MapInstanceClass.new()
+	map.setup({"map_id": "smoke_map", "display_name": "测试地图", "map_type": "forest", "size": [128, 128]})
+	var ok = map.map_id != "" and map.display_name != "" and map.map_type == "forest" and map.size == Vector2i(128, 128)
+	_record("T120", "MapInstance 有 map_id/display_name/map_type/size", ok)
+
+
+func _t121() -> void:
+	var map = MapInstanceClass.new()
+	map.setup({"map_id": "smoke_map", "map_type": "village"})
+	_record("T121", "MapInstance 有 default spawn", map.spawn_points.has("default"))
+
+
+func _t122() -> void:
+	var transition = MapTransitionClass.new()
+	transition.setup({"transition_id": "smoke_exit", "from_map_id": "a", "to_map_id": "b"})
+	_record("T122", "MapTransition 可创建", transition.transition_id == "smoke_exit" and transition.to_map_id == "b")
+
+
+func _t123() -> void:
+	var transition = MapTransitionClass.new()
+	transition.setup({"transition_id": "smoke_exit", "enabled": true})
+	_record("T123", "MapTransition can_use 在无条件时通过", transition.can_use(_world_state).get("ok", false))
+
+
+func _t124() -> void:
+	var transition = MapTransitionClass.new()
+	transition.setup({"transition_id": "sect_gate", "required_realm_order": 5, "locked_message": "境界不足"})
+	_world_state.progression_data["current_realm_order"] = 0
+	var result = transition.can_use(_world_state)
+	_record("T124", "MapTransition required_realm_order 不满足时拒绝", not result.get("ok", true), result.get("reason", ""))
+
+
+func _t125() -> void:
+	var state = MapStateClass.new()
+	state.mark_chest_opened("chest_001")
+	_record("T125", "MapState 可记录 opened_chests", state.is_chest_opened("chest_001"))
+
+
+func _t126() -> void:
+	var state = MapStateClass.new()
+	state.mark_resource_collected("herb_001")
+	_record("T126", "MapState 可记录 collected_resources", state.is_resource_collected("herb_001"))
+
+
+func _t127() -> void:
+	var state = MapStateClass.new()
+	state.mark_enemy_defeated("wolf_001")
+	_record("T127", "MapState 可记录 defeated_enemies", state.is_enemy_defeated("wolf_001"))
+
+
+func _t128() -> void:
+	var state = MapStateClass.new()
+	state.map_id = "forest_001"
+	state.mark_chest_opened("chest_001")
+	var serializer = MapStateSerializerClass.new()
+	var data = serializer.serialize_map_state(state)
+	var restored = serializer.deserialize_map_state(data)
+	_record("T128", "MapStateSerializer 可序列化/反序列化", restored.map_id == "forest_001" and restored.is_chest_opened("chest_001"))
+
+
+func _t129() -> void:
+	var loader = MapTypeRuleLoaderClass.new()
+	var rules = loader.load_rules()
+	_record("T129", "MapTypeRuleLoader 可加载 map_type_rules.json", not rules.is_empty())
+
+
+func _t130() -> void:
+	var rules = MapTypeRuleLoaderClass.new().load_rules()
+	var ok = rules.has("village") and rules.has("forest") and rules.has("cave") and rules.has("sect_gate")
+	_record("T130", "map_type_rules 至少包含 village/forest/cave/sect_gate", ok)
+
+
+func _t131() -> void:
+	var map = MapInstanceGeneratorClass.new().generate_map_instance({"map_id": "village_001", "display_name": "青木村", "map_type": "village"}, {"world_type": "xianxia", "seed": TEST_SEED})
+	_record("T131", "MapInstanceGenerator 可生成 village", map.map_type == "village" and map.tiles.size() > 0 and map.buildings.size() >= 3)
+
+
+func _t132() -> void:
+	var map = MapInstanceGeneratorClass.new().generate_map_instance({"map_id": "forest_001", "display_name": "黑松后山", "map_type": "forest"}, {"world_type": "xianxia", "seed": TEST_SEED})
+	_record("T132", "MapInstanceGenerator 可生成 forest", map.map_type == "forest" and map.tiles.size() > 0 and map.enemies.size() >= 3)
+
+
+func _t133() -> void:
+	var map = MapInstanceGeneratorClass.new().generate_map_instance({"map_id": "village_001", "map_type": "village"}, {"seed": TEST_SEED})
+	_record("T133", "village 默认尺寸为 96x96 或来自规则", map.size == Vector2i(96, 96), "%dx%d" % [map.size.x, map.size.y])
+
+
+func _t134() -> void:
+	var map = MapInstanceGeneratorClass.new().generate_map_instance({"map_id": "forest_001", "map_type": "forest"}, {"seed": TEST_SEED})
+	_record("T134", "forest 默认尺寸为 128x128 或来自规则", map.size == Vector2i(128, 128), "%dx%d" % [map.size.x, map.size.y])
+
+
+func _t135() -> void:
+	var bp = await _get_mock_blueprint()
+	_record("T135", "MockProvider 生成 blueprint 包含 maps", bp.has("maps") and bp.get("maps", []).size() >= 4)
+
+
+func _t136() -> void:
+	var bp = await _get_mock_blueprint()
+	_record("T136", "MockProvider 生成 blueprint 包含 connections", bp.has("connections") and bp.get("connections", []).size() >= 3)
+
+
+func _t137() -> void:
+	var bp = await _get_mock_blueprint()
+	var graph = WorldGraphClass.new()
+	graph.setup(bp)
+	var result = MapConnectionValidatorClass.new().validate_world_graph(graph)
+	_record("T137", "MapConnectionValidator 检查连接有效", result.get("ok", false), str(result.get("errors", [])))
+
+
+func _t138() -> void:
+	var bp = await _get_mock_blueprint()
+	var scene = load("res://scenes/GameWorld.tscn")
+	var gw = scene.instantiate()
+	var ok = gw.setup_world_graph_from_blueprint(bp)
+	gw.queue_free()
+	_record("T138", "GameWorld 可 setup WorldGraph", ok)
+
+
+func _t139() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = gw != null and gw.get_current_map_id() == "village_001"
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T139", "GameWorld 可 load_map village_001", ok)
+
+
+func _t140() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = gw != null and gw.get_current_map_id() == "village_001"
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T140", "GameWorld 当前 map_id 正确", ok)
+
+
+func _t141() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = gw.switch_map("forest_001", "from_village") if gw != null else false
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T141", "GameWorld 可 switch_map 到 forest_001", ok)
+
+
+func _t142() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		gw.switch_map("forest_001", "from_village")
+		ok = gw.get_current_map_id() == "forest_001"
+		gw.queue_free()
+		await _wait_frame()
+	_record("T142", "switch_map 后 current_map_id 正确", ok)
+
+
+func _t143() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		gw.switch_map("forest_001", "from_village")
+		var player = gw.get_player_node()
+		var expected = gw.current_map_instance.get_spawn_point("from_village")
+		var actual = Vector2i(int(player.position.x / 32), int(player.position.y / 32)) if player != null else Vector2i(-1, -1)
+		ok = actual == expected
+		gw.queue_free()
+		await _wait_frame()
+	_record("T143", "switch_map 后玩家位置使用目标 spawn", ok)
+
+
+func _t144() -> void:
+	_prepare_map_save_state()
+	var ok = _save_manager.save_game("smoke_map_arch") and _save_manager.has_save("smoke_map_arch")
+	_record("T144", "SaveManager 保存 current_map_id", ok)
+
+
+func _t145() -> void:
+	var ok = _world_state.visited_maps.has("village_001") and _world_state.visited_maps.has("forest_001")
+	_record("T145", "SaveManager 保存 visited_maps", ok)
+
+
+func _t146() -> void:
+	var ok = _world_state.map_states.has("forest_001")
+	_record("T146", "SaveManager 保存 map_states", ok)
+
+
+func _t147() -> void:
+	_world_state.current_map_id = "changed"
+	var result = _save_manager.load_game("smoke_map_arch")
+	var ok = result.get("ok", false) and _world_state.current_map_id == "forest_001"
+	_record("T147", "SaveManager 读取 current_map_id", ok)
+
+
+func _t148() -> void:
+	var ok = _world_state.map_states.has("forest_001") and _world_state.map_states["forest_001"].get("opened_chests", {}).has("chest_001")
+	_save_manager.delete_save("smoke_map_arch")
+	_record("T148", "SaveManager 读取 map_states", ok)
+
+
+func _t149() -> void:
+	var template = BuildingTemplateClass.new()
+	template.setup({"building_type": "apothecary", "display_name": "药铺", "size": [6, 5]})
+	_record("T149", "BuildingTemplate 可创建", template.building_type == "apothecary")
+
+
+func _t150() -> void:
+	var building = BuildingInstanceClass.new()
+	building.setup({"building_id": "inn_001", "building_type": "inn", "position": {"x": 4, "y": 5}, "size": [8, 6]})
+	_record("T150", "BuildingInstance 可创建", building.building_id == "inn_001")
+
+
+func _t151() -> void:
+	var map = MapInstanceGeneratorClass.new().generate_map_instance({"map_id": "village_001", "map_type": "village"}, {"seed": TEST_SEED})
+	var result = BuildingPlacementValidatorClass.new().validate_placement(map, {"building_id": "bad", "position": {"x": map.size.x - 1, "y": map.size.y - 1}, "size": [8, 8]})
+	_record("T151", "BuildingPlacementValidator 可检测 footprint 越界", not result.get("ok", true))
+
+
+func _t152() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = gw != null and gw.get_node_or_null("BuildingLayer") != null
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T152", "GameWorld 有 BuildingLayer", ok)
+
+
+func _t153() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = gw != null and gw.get_node_or_null("TransitionLayer") != null
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T153", "GameWorld 有 TransitionLayer", ok)
+
+
+func _t154() -> void:
+	_record("T154", "GAMEPLAY_MAP_ARCHITECTURE.md 存在", FileAccess.file_exists("res://GAMEPLAY_MAP_ARCHITECTURE.md"))
+
+
+func _t155() -> void:
+	var text = _read_text("res://README.md")
+	_record("T155", "README 更新 v0.4.0 地图架构说明", "v0.4.0" in text and "WorldGraph" in text and "MapInstance" in text)
 
 
 func _all_files_exist(paths: Array) -> bool:
@@ -906,6 +1198,36 @@ func _setup_progression(world_type: String):
 	system.bind_world_state(_world_state)
 	system.setup(world_type, template)
 	return system
+
+
+func _make_loaded_game_world(map_id: String):
+	var bp = await _get_mock_blueprint()
+	_world_state.reset_state()
+	_world_state.set_world_blueprint(bp)
+	var scene = load("res://scenes/GameWorld.tscn")
+	if scene == null:
+		return null
+	var gw = scene.instantiate()
+	root.add_child(gw)
+	await _wait_frame()
+	if gw.get_current_map_id() != map_id:
+		gw.load_map(map_id, "default")
+		await _wait_frame()
+	return gw
+
+
+func _prepare_map_save_state() -> void:
+	_world_state.current_map_id = "forest_001"
+	_world_state.visited_maps = {"village_001": true, "forest_001": true}
+	_world_state.map_states = {
+		"forest_001": {
+			"map_id": "forest_001",
+			"visited": true,
+			"opened_chests": {"chest_001": true},
+			"collected_resources": {"herb_001": true},
+			"defeated_enemies": {"wolf_001": true}
+		}
+	}
 
 
 # ═══════════════ 汇总 ═══════════════

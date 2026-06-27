@@ -1,0 +1,98 @@
+{
+	"chief_house": {
+		"building_type": "chief_house",
+		"display_name": "村长家",
+		"world_types": ["xianxia", "wuxia", "magic", "apocalypse", "cyberpunk"],
+		"size": [7, 6],
+		"door_offset": [3, 5],
+		"services": ["quest"],
+		"interior_template": "simple_house",
+		"default_npcs": ["village_elder"],
+		"faction_role": "civilian",
+		"access_rules": {}
+	},
+	"apothecary": {
+		"building_type": "apothecary",
+		"display_name": "药铺",
+		"world_types": ["xianxia", "wuxia"],
+		"size": [6, 5],
+		"door_offset": [3, 4],
+		"services": ["healer", "item_shop"],
+		"interior_template": "shop",
+		"default_npcs": ["doctor"],
+		"faction_role": "civilian",
+		"access_rules": {}
+	},
+	"blacksmith": {
+		"building_type": "blacksmith",
+		"display_name": "铁匠铺",
+		"world_types": ["xianxia", "wuxia", "magic"],
+		"size": [6, 5],
+		"door_offset": [3, 4],
+		"services": ["weapon_shop"],
+		"interior_template": "shop",
+		"default_npcs": ["blacksmith"],
+		"faction_role": "civilian",
+		"access_rules": {}
+	},
+	"inn": {
+		"building_type": "inn",
+		"display_name": "客栈",
+		"world_types": ["xianxia", "wuxia", "magic"],
+		"size": [8, 6],
+		"door_offset": [4, 5],
+		"services": ["inn", "food"],
+		"interior_template": "inn",
+		"default_npcs": ["innkeeper"],
+		"faction_role": "civilian",
+		"access_rules": {}
+	},
+	"general_store": {
+		"building_type": "general_store",
+		"display_name": "杂货铺",
+		"world_types": ["xianxia", "wuxia", "magic", "apocalypse", "cyberpunk"],
+		"size": [6, 5],
+		"door_offset": [3, 4],
+		"services": ["item_shop"],
+		"interior_template": "shop",
+		"default_npcs": ["merchant"],
+		"faction_role": "civilian",
+		"access_rules": {}
+	},
+	"sect_gate": {
+		"building_type": "sect_gate",
+		"display_name": "宗门山门",
+		"world_types": ["xianxia"],
+		"size": [12, 5],
+		"door_offset": [6, 4],
+		"services": ["faction_hall"],
+		"interior_template": "",
+		"default_npcs": ["sect_guard"],
+		"faction_role": "sect",
+		"access_rules": {"required_realm_order": 1}
+	},
+	"task_hall": {
+		"building_type": "task_hall",
+		"display_name": "任务堂",
+		"world_types": ["xianxia"],
+		"size": [9, 6],
+		"door_offset": [4, 5],
+		"services": ["quest_board"],
+		"interior_template": "hall",
+		"default_npcs": ["task_elder"],
+		"faction_role": "sect",
+		"access_rules": {}
+	},
+	"training_hall": {
+		"building_type": "training_hall",
+		"display_name": "演武场",
+		"world_types": ["xianxia", "wuxia"],
+		"size": [10, 8],
+		"door_offset": [5, 7],
+		"services": ["training_hall"],
+		"interior_template": "hall",
+		"default_npcs": ["trainer"],
+		"faction_role": "sect",
+		"access_rules": {}
+	}
+}
