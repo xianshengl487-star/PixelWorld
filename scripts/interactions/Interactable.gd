@@ -1,15 +1,21 @@
 extends Node2D
 class_name Interactable
-## Interactable.gd — 第一版可交互物体
+## Interactable.gd - simple map-scoped interactable object.
+
+const ScopedIdClass = preload("res://scripts/core/ScopedId.gd")
+const MapStateClass = preload("res://scripts/map/MapState.gd")
 
 @export var id: String = ""
-@export var display_name: String = "可交互物"
+@export var display_name: String = "Interactable"
 @export var interaction_type: String = "sign"
 @export var interaction_text: String = ""
 
 var item_id: String = ""
 var item_amount: int = 1
 var is_consumed: bool = false
+var map_id: String = ""
+var scoped_id: String = ""
+
 var _label: Label = null
 var _sprite: ColorRect = null
 
@@ -21,12 +27,20 @@ func _ready() -> void:
 
 
 func setup(data: Dictionary, tile_size: int = 32) -> void:
-	id = data.get("id", id)
-	display_name = data.get("display_name", display_name)
-	interaction_type = data.get("interaction_type", interaction_type)
-	interaction_text = data.get("interaction_text", interaction_text)
-	item_id = data.get("item_id", item_id)
+	id = str(data.get("id", id))
+	display_name = str(data.get("display_name", display_name))
+	interaction_type = str(data.get("interaction_type", interaction_type))
+	interaction_text = str(data.get("interaction_text", interaction_text))
+	item_id = str(data.get("item_id", item_id))
 	item_amount = int(data.get("item_amount", item_amount))
+	map_id = str(data.get("map_id", map_id))
+	if map_id == "":
+		var world_state = _world_state()
+		if world_state != null:
+			map_id = str(world_state.current_map_id)
+	scoped_id = str(data.get("scoped_id", scoped_id))
+	if scoped_id == "":
+		scoped_id = ScopedIdClass.new().make(map_id, id)
 	var x = float(data.get("x", 0))
 	var y = float(data.get("y", 0))
 	position = Vector2(x * tile_size + tile_size / 2, y * tile_size + tile_size / 2)
@@ -40,28 +54,31 @@ func on_interact(player) -> Dictionary:
 	var world_state = _world_state()
 	var game_log = _game_log()
 	if world_state == null:
-		return {"ok": false, "message": "WorldState 不可用"}
+		return {"ok": false, "message": "WorldState unavailable"}
 	if is_consumed:
-		return {"ok": false, "message": "%s 已经被处理过了。" % display_name}
-	var message = interaction_text if interaction_text != "" else "你查看了 %s。" % display_name
+		return {"ok": false, "message": "%s already handled." % display_name}
+	var message = interaction_text if interaction_text != "" else "You inspect %s." % display_name
 	match interaction_type:
 		"resource":
 			var gained = item_id if item_id != "" else "herb"
 			_add_item(gained, item_amount)
+			_mark_resource_collected()
+			_update_quest({"type": "collect_item", "target_id": gained, "item_id": gained, "amount": item_amount})
 			_mark_consumed()
-			message = "你拾取了 %s x%d。" % [display_name, item_amount]
+			message = "Collected %s x%d." % [display_name, item_amount]
 		"chest":
 			_add_item("coin", 5)
 			_add_item("potion", 1)
-			world_state.collected_items.append(id)
+			_mark_chest_opened()
+			_update_quest({"type": "open_chest", "target_id": id, "object_id": id, "amount": 1})
 			_mark_consumed()
-			message = "你打开了%s，获得铜钱和药水。" % display_name
+			message = "Opened %s and found coin and potion." % display_name
 		"door", "cave", "sign":
-			pass
+			_update_quest({"type": "interact_object", "target_id": id, "object_id": id, "amount": 1})
 	if game_log:
 		game_log.add_entry(message)
-	world_state.log_action("交互: %s" % display_name, {"type": interaction_type, "id": id})
-	return {"ok": true, "message": message, "id": id, "type": interaction_type}
+	world_state.log_action("Interact: %s" % display_name, {"type": interaction_type, "id": id, "scoped_id": scoped_id})
+	return {"ok": true, "message": message, "id": id, "scoped_id": scoped_id, "type": interaction_type}
 
 
 func _add_item(gained_id: String, amount: int) -> void:
@@ -69,8 +86,43 @@ func _add_item(gained_id: String, amount: int) -> void:
 	if world_state == null:
 		return
 	world_state.add_item(gained_id, amount)
-	if not world_state.collected_items.has(id):
-		world_state.collected_items.append(id)
+	if not world_state.collected_items.has(scoped_id):
+		world_state.collected_items.append(scoped_id)
+
+
+func _mark_resource_collected() -> void:
+	var state = _map_state()
+	state.mark_resource_collected(scoped_id)
+	_save_state(state)
+
+
+func _mark_chest_opened() -> void:
+	var state = _map_state()
+	state.mark_chest_opened(scoped_id)
+	_save_state(state)
+
+
+func _map_state():
+	var state = MapStateClass.new()
+	var world_state = _world_state()
+	if world_state != null:
+		state.load_save_data(world_state.get_map_state(map_id))
+	state.map_id = map_id
+	state.mark_visited()
+	return state
+
+
+func _save_state(state) -> void:
+	var world_state = _world_state()
+	if world_state != null:
+		world_state.set_map_state(map_id, state.to_save_data())
+
+
+func _update_quest(event: Dictionary) -> void:
+	var world_state = _world_state()
+	if world_state != null and world_state.has_method("update_quest_objective"):
+		event["map_id"] = map_id
+		world_state.update_quest_objective(event)
 
 
 func _mark_consumed() -> void:

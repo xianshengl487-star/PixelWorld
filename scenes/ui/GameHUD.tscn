@@ -122,6 +122,27 @@ theme_override_font_sizes/font_size = 14
 text = ""
 horizontal_alignment = 1
 
+[node name="QuestInfoLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 12.0
+offset_top = 118.0
+offset_right = 520.0
+offset_bottom = 140.0
+theme_override_font_sizes/font_size = 13
+text = "Quest: --"
+
+[node name="DebugInfoLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 12.0
+offset_top = 142.0
+offset_right = 980.0
+offset_bottom = 166.0
+theme_override_font_sizes/font_size = 12
+text = "Debug: --"
+autowrap_mode = 2
+
 [node name="LogPanel" type="Panel" parent="."]
 layout_mode = 1
 anchors_preset = 12

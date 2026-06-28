@@ -1,10 +1,10 @@
 # PixelWorld
 
-PixelWorld is a Godot 4.7 top-down pixel RPG prototype. The current version is **v0.4.1**, focused on building interiors, deeper village content, runtime map switching, and stronger per-map save state on top of the Pokemon/Stardew-style multi-map architecture introduced in v0.4.0.
+PixelWorld is a Godot 4.7 top-down pixel RPG prototype. The current version is **v0.4.2**, focused on code health, map-state isolation, building services, old-save migration, and a first deterministic quest system on top of the Pokemon/Stardew-style multi-map architecture introduced in v0.4.0.
 
 ## Current Version
 
-- Version: `v0.4.1`
+- Version: `v0.4.2`
 - Engine: Godot `4.7.stable`
 - AI mode: Mock/local only
 - Real MiMo / NVIDIA API integration: paused
@@ -23,13 +23,32 @@ PixelWorld is a Godot 4.7 top-down pixel RPG prototype. The current version is *
 - New per-map `MapState` persistence for opened chests, collected resources, defeated enemies, triggered events, solved puzzles, NPC states, building states, dynamic objects, last player position, and visited state
 - New `MapInstanceGenerator` and `MapTypeRuleLoader` using `data/map_generation/map_type_rules.json`
 - Building template and service pipeline using `BuildingTemplate`, `BuildingInstance`, `BuildingPlacementValidator`, `BuildingRegistry`, `BuildingService`, `InteriorMapGenerator`, `DoorInteraction`, and `data/buildings/building_templates.json`
+- Building services now include deterministic healer, inn, shop purchase, blacksmith upgrade, training, storage, and quest board behavior.
+- `ScopedId` and per-map state boundaries keep same local ids on different maps isolated as `map_id::local_id`.
+- Basic deterministic quest system with `QuestSystem`, `QuestData`, `QuestObjective`, and `data/quests/basic_quests.json`
 - Village generation now places chief house, apothecary, blacksmith, inn, and general store buildings with doors, services, interior map ids, and road-connected entrances
 - Building interiors are generated as separate `interior` maps with default/exit spawns, service POIs, NPC placeholders, and return transitions
 - Runtime `GameWorld` loading/unloading maps through `load_map()` and `switch_map()`
 - JSON save/load through `SaveManager`, now including map id, visited maps, map states, world graph data, per-map player positions, last spawn id, and building states
+- Save data now includes `save_version`, quest state, equipment state, training-use state, and v0.4.2 migration defaults for old saves.
 - Player movement, HP, stamina, attack, damage, death, respawn, NPCs, enemies, interactions, inventory, HUD, and progression summary
 - Program-generated placeholder pixel assets
 - v0.3.0 world progression templates retained for xianxia, magic, apocalypse, cyberpunk, wuxia, urban ability, strange tale, and star sci worlds
+
+## v0.4.2 State Isolation, Services, And Quests
+
+v0.4.2 hardens the v0.4.1 map/building foundation and starts turning buildings into gameplay providers.
+
+- `CODE_HEALTH_REPORT.md` records version consistency, risk review, and non-goals.
+- `ScopedId` creates `map_id::local_id` ids so resources, chests, and enemies with the same local id remain isolated by map.
+- `GameWorld.save_current_map_state()` no longer copies all global collected/defeated ids into the current map state.
+- `GameWorld.switch_map()` saves once, handles failed targets safely, and preserves current map identity when the target is missing.
+- `SaveManager.migrate_save_data()` upgrades older saves by filling missing v0.4.2 fields instead of crashing.
+- `BuildingService` provides local gameplay effects for healer, inn, shop, blacksmith, quest board, training, and storage.
+- `QuestSystem` tracks available, active, completed, and turned-in quests with deterministic objective updates.
+- `GameHUD` exposes compact quest/debug text methods for runtime inspection.
+
+See `GAMEPLAY_QUESTS.md` for the quest data notes.
 
 ## v0.4.1 Building Interiors And Runtime Transitions
 
@@ -108,6 +127,7 @@ python tools\generate_pixel_assets.py
 
 - v0.4.0: establish multi-map world graph, map switching, per-map state, and building templates.
 - v0.4.1: add building interiors, village door transitions, map-state strengthening, T025 cleanup, and T156-T210 regression coverage.
+- v0.4.2: add code health report, scoped ids, safer map switching, save migration, building-service gameplay, quest data, HUD debug hooks, and T211-T270 coverage.
 - v0.4.x: add more authored map types, richer interior maps, and more transition unlock rules.
 - v0.5.x: connect progression rewards to real combat/exploration loops and tune breakthrough costs.
 - v0.6.x: replace more ColorRect placeholders with generated tile/item sprites.
@@ -117,17 +137,18 @@ python tools\generate_pixel_assets.py
 
 ## Test Status
 
-Latest recorded result for v0.4.1:
+Latest recorded result for v0.4.2:
 
 - JSON parse validation: PASS
 - CLI compile validation: PASS
-- SmokeTestRunner: `192/192 PASS`
+- SmokeTestRunner: `252/252 PASS`
 - New v0.4.0 tests `T116-T155`: `40/40 PASS`
 - New v0.4.1 tests `T156-T210`: `55/55 PASS`
+- New v0.4.2 tests `T211-T270`: `60/60 PASS`
 - `T025` result in this run: PASS
 - `T028` result in this run: PASS
 
-Manual Godot editor F5 validation was not executed in this CLI pass; manual checks remain marked as untested in `TEST_REPORT.md`.
+Godot editor/runtime GUI launch was attempted after CLI validation, but Codex cannot visually confirm the editor/runtime window. Manual F5 checks `M031-M050` remain untested in `TEST_REPORT.md`.
 
 Run smoke tests:
 

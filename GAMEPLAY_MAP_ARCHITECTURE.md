@@ -1,10 +1,10 @@
-# PixelWorld v0.4.1 Gameplay Map Architecture
+# PixelWorld v0.4.2 Gameplay Map Architecture
 
-This document records the v0.4.1 map architecture. PixelWorld now uses a Pokemon/Stardew-style collection of discrete maps connected by exits, doors, caves, paths, and future story gates. v0.4.1 extends the v0.4.0 graph foundation with Building Interior maps and runtime village <-> interior transitions.
+This document records the v0.4.2 map architecture. PixelWorld now uses a Pokemon/Stardew-style collection of discrete maps connected by exits, doors, caves, paths, and future story gates. v0.4.2 extends the v0.4.1 building-interior runtime path with map-state isolation, scoped object ids, safer map switching, save migration, building-service gameplay, and a first deterministic quest layer.
 
 ## Scope
 
-v0.4.1 adds the building interior runtime path, deeper default village content, stronger map state persistence, and regression coverage for T156-T210. It does not add real AI calls, TileMapLayer migration, seamless infinite maps, multiplayer, or a full visual interior editor.
+v0.4.2 adds code health review, scoped ids, state-isolated map saves, old-save migration, deterministic building services, basic quests, HUD debug hooks, and regression coverage for T211-T270. It does not add real AI calls, TileMapLayer migration, seamless infinite maps, multiplayer, or a full visual interior editor.
 
 The old single-map generation path is intentionally retained for compatibility with older tests and fallback behavior.
 
@@ -55,6 +55,14 @@ The old single-map generation path is intentionally retained for compatibility w
 - dynamic objects
 - last player position
 
+`ScopedId` gives local gameplay objects a stable map scope:
+
+```text
+map_id::local_id
+```
+
+The same local id on two maps is treated as two different runtime/save ids. `GameWorld`, `Enemy`, and `Interactable` use scoped ids for defeated enemies, resources, chests, and object interaction state.
+
 `MapStateSerializer` converts all map states into save-friendly dictionaries and restores them on load.
 
 ## Runtime Flow
@@ -67,6 +75,7 @@ The old single-map generation path is intentionally retained for compatibility w
 6. `GameWorld.switch_map(target_map_id, spawn_id)` saves the current `MapState`, unloads the old runtime nodes, loads the target map, and places the player at the target spawn.
 7. `GameWorld.request_map_transition(transition_id)` resolves graph/map transitions, validates unlock rules, and calls `switch_map()`.
 8. `SaveManager` persists current map id, visited maps, map states, world graph data, last spawn id, per-map player positions, and building states.
+9. `QuestSystem` receives deterministic events from map visits, enemy deaths, item collection, chest opening, and object interaction.
 
 ## Default Map Set
 
@@ -117,7 +126,7 @@ forest_001 <-> cave_001
 - faction role
 - access rules
 
-## Building Interior System
+## Building Interior And Service System
 
 v0.4.1 turns core village buildings into enterable graph nodes:
 
@@ -134,6 +143,16 @@ The default village generation path places chief house, apothecary, blacksmith, 
 
 This is not yet a full house editor. Interiors are generated from simple templates and rendered through the existing MVP tile/marker path.
 
+v0.4.2 makes `BuildingService` gameplay-facing:
+
+- healer restores health with coin cost or returns an insufficient-coin prompt
+- inn restores health/stamina and advances time
+- shop exposes deterministic goods and purchase costs
+- blacksmith upgrades `equipment_state.weapon_level`
+- training grants progression points with a daily limit
+- storage records local building state
+- quest board loads available quests from `data/quests/basic_quests.json`
+
 ## State And Save Boundaries
 
 World-level fields live in `WorldState`:
@@ -146,8 +165,24 @@ World-level fields live in `WorldState`:
 - building states
 - player positions by map
 - last spawn id
+- quest state
+- equipment state
+- training-use state
 
-Save data now includes these map/building fields while preserving older progression, inventory, NPC memory, action history, and world blueprint fields. Old saves with missing map/building fields are treated as empty dictionaries and should not crash load.
+Save data now includes these map/building/quest fields while preserving older progression, inventory, NPC memory, action history, and world blueprint fields. Old saves with missing map/building/quest fields are migrated to safe defaults and should not crash load.
+
+Current-map saves intentionally do not copy all global defeated enemy or collected item ids into the active `MapState`. Only the local scoped ids touched by that map should live in that map's state dictionary.
+
+## Quest Hooks
+
+`QuestSystem` is intentionally deterministic and data-driven:
+
+- quest definitions live in `data/quests/basic_quests.json`
+- active/completed/turned-in state lives in `WorldState.quest_state`
+- rewards can grant coin, items, progression points, faction attitude, and unlock flags
+- objective events include `defeat_enemy`, `collect_item`, `visit_map`, `interact_object`, `open_chest`, and `talk_to_npc`
+
+The first version is a foundation for future quest UI. It does not call real AI providers.
 
 ## Validation
 
@@ -179,6 +214,17 @@ v0.4.1 adds SmokeTest coverage `T156-T210` for:
 - `T025` player-node regression rerun
 - README, TEST_REPORT, and architecture documentation updates
 
+v0.4.2 adds SmokeTest coverage `T211-T270` for:
+
+- code health report and version consistency documentation
+- scoped id creation/splitting and cross-map state isolation
+- safe map switching, missing spawn fallback, and no duplicate same-map rebuild
+- building services for healer, inn, shop, blacksmith, quest board, training, and storage
+- quest loading, acceptance, objective progress, completion, turn-in rewards, and save/load
+- save migration for missing v0.4.2 fields
+- HUD quest/debug methods and runtime checklist helper
+- README, DEV_LOG, TEST_REPORT, and quest documentation updates
+
 ## Known Limits
 
 - Runtime rendering still uses MVP `ColorRect` tiles and markers in many places.
@@ -186,3 +232,5 @@ v0.4.1 adds SmokeTest coverage `T156-T210` for:
 - Manual Godot editor F5 validation is still required for player feel, visual layout, collision feel, and real interaction prompts.
 - Real AI provider integration remains paused.
 - Cross-map transition UX is functional at data/runtime level but still needs richer player-facing interaction prompts.
+- Quest UI is currently a compact HUD/debug foundation, not a full journal.
+- Manual Godot editor F5 validation for M031-M050 remains required.

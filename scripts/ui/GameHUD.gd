@@ -23,6 +23,8 @@ class_name GameHUD
 @onready var _map_info_label: Label = get_node_or_null("MapInfoLabel")
 @onready var _building_info_label: Label = get_node_or_null("BuildingInfoLabel")
 @onready var _transition_message_label: Label = get_node_or_null("TransitionMessageLabel")
+@onready var _quest_info_label: Label = get_node_or_null("QuestInfoLabel")
+@onready var _debug_info_label: Label = get_node_or_null("DebugInfoLabel")
 
 var _ai_client = null
 var _player = null
@@ -154,6 +156,34 @@ func update_building_info(building_name: String = "") -> void:
 	var text = "Building: %s" % building_name if building_name != "" else ""
 	if _building_info_label != null:
 		_building_info_label.text = text
+
+
+func update_quest_info(active_quests: Array = []) -> void:
+	if _quest_info_label == null:
+		return
+	if active_quests.is_empty():
+		_quest_info_label.text = "Quest: --"
+		return
+	var quest = active_quests[0]
+	var title = str(quest.get("title", quest.get("quest_id", "Quest"))) if quest is Dictionary else str(quest)
+	_quest_info_label.text = "Quest: %s" % title
+
+
+func show_debug_info(summary: Dictionary) -> void:
+	if _debug_info_label == null:
+		return
+	var tile = summary.get("player_tile", {})
+	_debug_info_label.text = "Debug map=%s type=%s pos=(%s,%s) transitions=%s buildings=%s enemies=%s interactables=%s quests=%s" % [
+		summary.get("current_map_id", ""),
+		summary.get("current_map_type", ""),
+		str(tile.get("x", 0)) if tile is Dictionary else "0",
+		str(tile.get("y", 0)) if tile is Dictionary else "0",
+		str(summary.get("transition_count", 0)),
+		str(summary.get("building_count", 0)),
+		str(summary.get("enemy_count", 0)),
+		str(summary.get("interactable_count", 0)),
+		str(summary.get("active_quest_count", 0))
+	]
 
 
 func show_breakthrough_result(result: Dictionary) -> void:

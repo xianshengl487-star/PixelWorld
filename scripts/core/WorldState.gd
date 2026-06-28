@@ -5,6 +5,7 @@ extends Node
 const InventoryClass = preload("res://scripts/items/Inventory.gd")
 const ProgressionTemplateLoaderClass = preload("res://scripts/progression/ProgressionTemplateLoader.gd")
 const WorldGraphClass = preload("res://scripts/world/WorldGraph.gd")
+const QuestSystemClass = preload("res://scripts/quests/QuestSystem.gd")
 
 # ============================================
 # 世界蓝图
@@ -22,6 +23,9 @@ var global_flags: Dictionary = {}
 var building_states: Dictionary = {}
 var player_position_by_map: Dictionary = {}
 var last_spawn_id: String = "default"
+var quest_state: Dictionary = {}
+var equipment_state: Dictionary = {}
+var training_used_today: Dictionary = {}
 
 # ============================================
 # 时间系统
@@ -93,6 +97,9 @@ func reset_state() -> void:
 	building_states.clear()
 	player_position_by_map.clear()
 	last_spawn_id = "default"
+	quest_state.clear()
+	equipment_state.clear()
+	training_used_today.clear()
 	current_day = 1
 	current_hour = 8
 	player_reputation = 0
@@ -303,6 +310,7 @@ func log_action(action: String, result: Dictionary = {}) -> void:
 ## 背包操作
 func add_item(item_id: String, amount: int = 1) -> void:
 	inventory.add_item(item_id, amount)
+	update_quest_objective({"type": "collect_item", "target_id": item_id, "item_id": item_id, "amount": amount})
 
 
 func remove_item(item_id: String, amount: int = 1) -> bool:
@@ -338,6 +346,23 @@ func mark_enemy_defeated(enemy_id: String) -> void:
 		return
 	if not defeated_enemies.has(enemy_id):
 		defeated_enemies.append(enemy_id)
+
+
+func update_quest_objective(event: Dictionary) -> void:
+	var system = get_quest_system()
+	system.update_objective(event)
+	quest_state = system.to_save_data()
+
+
+func get_quest_system():
+	var system = QuestSystemClass.new()
+	var load_result = system.load_quests()
+	if not load_result.get("ok", false):
+		return system
+	if quest_state is Dictionary and not quest_state.is_empty():
+		system.load_save_data(quest_state)
+	quest_state = system.to_save_data()
+	return system
 
 
 ## 设置 NPC 记忆

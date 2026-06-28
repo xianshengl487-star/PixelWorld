@@ -4,6 +4,51 @@
 
 ---
 
+## 2026-06-28 - v0.4.2 Code health, state isolation, services, and quests
+
+### Update Type
+
+Code health / map-state isolation / save migration / building services / quest system / HUD debug hooks / tests / documentation
+
+### What Changed
+
+* Added `CODE_HEALTH_REPORT.md` with version consistency, audit scope, fixed risks, explicit non-goals, and known non-failing warnings.
+* Added `scripts/core/ScopedId.gd` for stable `map_id::local_id` object ids.
+* Reworked `GameWorld.gd` map-state save/restore boundaries so global defeated/collected ids are not copied into the currently loaded map state.
+* Strengthened `GameWorld.load_map()` and `switch_map()` with same-map no-rebuild behavior, skip-save during switch, failed-target protection, missing-spawn fallback, and debug summary helpers.
+* Extended `WorldState.gd` and `SaveManager.gd` with `save_version`, `quest_state`, `equipment_state`, `training_used_today`, and old-save migration defaults.
+* Reworked `BuildingService.gd` with deterministic healer, inn, shop, blacksmith, quest board, training, and storage service behavior.
+* Added `QuestObjective.gd`, `QuestData.gd`, `QuestSystem.gd`, and `data/quests/basic_quests.json`.
+* Updated `Enemy.gd`, `Interactable.gd`, and `GameWorld.gd` to emit quest events for enemy defeat, item collection, map visit, object interaction, and chest opening.
+* Expanded `GameHUD.gd` and `GameHUD.tscn` with quest and debug display methods/nodes.
+* Added `scripts/tests/RuntimeGuiChecklist.gd` as a runtime helper; it does not replace manual F5 visual validation.
+* Expanded `SmokeTestRunner.gd` with T211-T270 for code health docs, scoped ids, map-state isolation, service behavior, quest behavior, save migration, HUD/debug hooks, and documentation checks.
+* Updated `README.md`, `GAMEPLAY_MAP_ARCHITECTURE.md`, `GAMEPLAY_QUESTS.md`, `TEST_REPORT.md`, `DEV_LOG.md`, project version, and main menu version label to v0.4.2.
+
+### Reason
+
+v0.4.1 made interiors and runtime transitions work. v0.4.2 makes the foundation safer: map changes stay scoped to their own map, old saves receive predictable defaults, building services now produce real local effects, and a first deterministic quest layer can connect enemies, resources, map visits, and buildings without real AI providers.
+
+### Validation
+
+* Godot 4.7 CLI compile validation: PASS
+* JSON configuration parse validation: PASS
+* SmokeTestRunner pre-documentation verification: 247/252 PASS; remaining failures were documentation gates only.
+* SmokeTestRunner final run after documentation: 252/252 PASS for T001-T270.
+* T025: PASS in this CLI run.
+* T028: PASS in this CLI run.
+* Editor GUI attempt: 未测：Codex could start process but cannot visually confirm editor window. Process id `375904` stayed alive during the short launch check, then was closed.
+* Runtime GUI attempt: 未测：Codex could start process but cannot visually confirm runtime window. Process id `365664` stayed alive during the short launch check, then was closed.
+* Manual F5 checks M031-M050: 未测; requires human visual confirmation.
+
+### Follow-Up
+
+* Run real Godot editor F5 validation for M031-M050.
+* Add a dedicated quest panel and accept/turn-in UI after the deterministic quest data path stays stable.
+* Add richer map-authored interiors and service-specific interaction prompts.
+
+---
+
 ## 2026-06-28 - v0.4.1 Building interiors, runtime transitions, and save-state strengthening
 
 ### Update Type

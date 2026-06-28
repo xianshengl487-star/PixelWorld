@@ -13,6 +13,8 @@ const MapStateClass = preload("res://scripts/map/MapState.gd")
 const MapTransitionClass = preload("res://scripts/map/MapTransition.gd")
 const TransitionAreaClass = preload("res://scripts/map/TransitionArea.gd")
 const WorldGraphClass = preload("res://scripts/world/WorldGraph.gd")
+const ScopedIdClass = preload("res://scripts/core/ScopedId.gd")
+const QuestSystemClass = preload("res://scripts/quests/QuestSystem.gd")
 const EnemyScene = preload("res://scenes/Enemy.tscn")
 const InteractableClass = preload("res://scripts/interactions/Interactable.gd")
 const ExplorationSystemClass = preload("res://scripts/world/ExplorationSystem.gd")
@@ -87,7 +89,7 @@ func setup_world_graph_from_blueprint(blueprint: Dictionary) -> bool:
 	return true
 
 
-func load_map(map_id: String, spawn_id: String = "default") -> bool:
+func load_map(map_id: String, spawn_id: String = "default", skip_save_current: bool = false, force_reload: bool = false) -> bool:
 	ensure_runtime_layers()
 	if current_world_graph == null:
 		if not setup_world_graph_from_blueprint(WorldState.world_blueprint):
@@ -95,7 +97,10 @@ func load_map(map_id: String, spawn_id: String = "default") -> bool:
 	if not current_world_graph.has_map(map_id):
 		_log_error("GameWorld", "target map not found: %s" % map_id)
 		return false
-	unload_current_map()
+	if map_id == current_map_id and current_map_instance != null and not force_reload:
+		place_player_at_spawn(spawn_id)
+		return true
+	unload_current_map(skip_save_current)
 	current_map_id = map_id
 	WorldState.set_current_map_id(map_id, spawn_id)
 	current_world_graph.set_current_map(map_id)
@@ -124,14 +129,16 @@ func load_map(map_id: String, spawn_id: String = "default") -> bool:
 	_spawn_enemies()
 	_spawn_interactables()
 	restore_map_state(map_id)
+	_update_quest_visit_map(map_id)
 	_setup_ui()
 	_log_map_arrival()
 	_is_initialized = get_player_node() != null
 	return _is_initialized
 
 
-func unload_current_map() -> void:
-	save_current_map_state()
+func unload_current_map(skip_save_current: bool = false) -> void:
+	if not skip_save_current:
+		save_current_map_state()
 	for layer_name in ["GroundLayer", "DecorationLayer", "BuildingLayer", "InteractionLayer", "TransitionLayer", "CollisionLayer", "NPCLayer", "EnemyLayer", "InteractableLayer", "TileMap"]:
 		var layer = get_node_or_null(layer_name)
 		if layer == null:
@@ -159,10 +166,6 @@ func save_current_map_state() -> void:
 		var tile_pos = Vector2i(int(player.position.x / TILE_SIZE), int(player.position.y / TILE_SIZE))
 		state.last_player_position = tile_pos
 		WorldState.player_position_by_map[current_map_id] = {"x": tile_pos.x, "y": tile_pos.y}
-	for enemy_id in WorldState.defeated_enemies:
-		state.mark_enemy_defeated(str(enemy_id))
-	for item_id in WorldState.collected_items:
-		state.mark_resource_collected(str(item_id))
 	if current_map_instance != null:
 		for building in current_map_instance.buildings:
 			var building_id = str(building.get("building_id", ""))
@@ -181,12 +184,6 @@ func restore_map_state(map_id: String) -> void:
 	var state_data = WorldState.get_map_state(map_id)
 	if state_data.is_empty():
 		return
-	for enemy_id in state_data.get("defeated_enemies", {}).keys():
-		if not WorldState.defeated_enemies.has(enemy_id):
-			WorldState.defeated_enemies.append(enemy_id)
-	for resource_id in state_data.get("collected_resources", {}).keys():
-		if not WorldState.collected_items.has(resource_id):
-			WorldState.collected_items.append(resource_id)
 	for building_id in state_data.get("building_states", {}).keys():
 		WorldState.building_states[str(building_id)] = state_data["building_states"][building_id]
 
@@ -198,7 +195,8 @@ func switch_map(target_map_id: String, target_spawn_id: String = "default") -> b
 		return false
 	var from_display = get_loaded_map_display_name()
 	save_current_map_state()
-	var ok = load_map(target_map_id, target_spawn_id)
+	var previous_map_id = current_map_id
+	var ok = load_map(target_map_id, target_spawn_id, true)
 	if ok:
 		var to_display = get_loaded_map_display_name()
 		if _is_interior_map(target_map_id):
@@ -208,6 +206,8 @@ func switch_map(target_map_id: String, target_spawn_id: String = "default") -> b
 		last_transition_message = "Arrived at %s" % to_display
 		if _hud != null and _hud.has_method("show_transition_message"):
 			_hud.show_transition_message(last_transition_message)
+	else:
+		current_map_id = previous_map_id
 	return ok
 
 
@@ -230,7 +230,12 @@ func request_map_transition(transition_id: String) -> bool:
 
 
 func place_player_at_spawn(spawn_id: String) -> bool:
-	var spawn = current_map_instance.get_spawn_point(spawn_id) if current_map_instance != null else Vector2i(int(WorldState.player_position.x), int(WorldState.player_position.y))
+	var actual_spawn = spawn_id
+	if current_map_instance != null and not current_map_instance.spawn_points.has(spawn_id):
+		actual_spawn = "default"
+		last_transition_message = "spawn not found, fallback to default: %s" % spawn_id
+		push_warning("[GameWorld] %s" % last_transition_message)
+	var spawn = current_map_instance.get_spawn_point(actual_spawn) if current_map_instance != null else Vector2i(int(WorldState.player_position.x), int(WorldState.player_position.y))
 	return ensure_player(spawn) != null
 
 
@@ -344,9 +349,90 @@ func get_building_count() -> int:
 	return current_map_instance.buildings.size() if current_map_instance != null else 0
 
 
+func get_scoped_object_id(local_id: String, map_id: String = "") -> String:
+	var scope = map_id if map_id != "" else current_map_id
+	return ScopedIdClass.new().make(scope, local_id)
+
+
+func get_current_map_state_data() -> Dictionary:
+	var state = WorldState.get_map_state(current_map_id)
+	if state.is_empty():
+		var map_state = MapStateClass.new()
+		map_state.setup({"map_id": current_map_id, "visited": current_map_id != ""})
+		state = map_state.to_save_data()
+		WorldState.set_map_state(current_map_id, state)
+	return state
+
+
+func is_object_collected(local_id: String) -> bool:
+	var scoped = get_scoped_object_id(local_id)
+	var state = get_current_map_state_data()
+	return bool(state.get("collected_resources", {}).get(scoped, false))
+
+
+func mark_object_collected(local_id: String) -> void:
+	var state = MapStateClass.new()
+	state.load_save_data(get_current_map_state_data())
+	state.mark_resource_collected(get_scoped_object_id(local_id))
+	WorldState.set_map_state(current_map_id, state.to_save_data())
+	map_states[current_map_id] = state.to_save_data()
+
+
+func is_enemy_defeated(local_id: String) -> bool:
+	var scoped = get_scoped_object_id(local_id)
+	var state = get_current_map_state_data()
+	return bool(state.get("defeated_enemies", {}).get(scoped, false))
+
+
+func mark_enemy_defeated(local_id: String) -> void:
+	var state = MapStateClass.new()
+	state.load_save_data(get_current_map_state_data())
+	state.mark_enemy_defeated(get_scoped_object_id(local_id))
+	WorldState.set_map_state(current_map_id, state.to_save_data())
+	map_states[current_map_id] = state.to_save_data()
+
+
+func is_chest_opened(local_id: String) -> bool:
+	var scoped = get_scoped_object_id(local_id)
+	var state = get_current_map_state_data()
+	return bool(state.get("opened_chests", {}).get(scoped, false))
+
+
+func mark_chest_opened(local_id: String) -> void:
+	var state = MapStateClass.new()
+	state.load_save_data(get_current_map_state_data())
+	state.mark_chest_opened(get_scoped_object_id(local_id))
+	WorldState.set_map_state(current_map_id, state.to_save_data())
+	map_states[current_map_id] = state.to_save_data()
+
+
+func debug_summary() -> Dictionary:
+	var player_tile = WorldState.player_position
+	return {
+		"current_map_id": current_map_id,
+		"current_map_type": get_current_map_type(),
+		"player_tile": {"x": int(player_tile.x), "y": int(player_tile.y)},
+		"transition_count": get_transition_count(),
+		"building_count": get_building_count(),
+		"enemy_count": get_enemy_count(),
+		"interactable_count": get_interactable_count(),
+		"active_quest_count": _active_quest_count(),
+		"last_transition_message": last_transition_message,
+		"current_save_slot": "save_001"
+	}
+
+
+func print_debug_summary() -> void:
+	print(JSON.stringify(debug_summary(), "\t"))
+
+
+func print_current_map_state() -> void:
+	print(JSON.stringify(get_current_map_state_data(), "\t"))
+
+
 func apply_loaded_state() -> void:
 	if WorldState.current_map_id != "" and WorldState.current_map_id != current_map_id:
-		load_map(WorldState.current_map_id, WorldState.last_spawn_id)
+		load_map(WorldState.current_map_id, WorldState.last_spawn_id, false, true)
 	else:
 		var player = get_player_node()
 		if player != null:
@@ -446,11 +532,14 @@ func _spawn_enemies() -> void:
 	var state = WorldState.get_map_state(current_map_id)
 	for data in enemies:
 		var enemy_id = str(data.get("id", ""))
-		if WorldState.defeated_enemies.has(enemy_id) or state.get("defeated_enemies", {}).has(enemy_id):
+		var scoped_enemy_id = get_scoped_object_id(enemy_id)
+		if state.get("defeated_enemies", {}).has(scoped_enemy_id):
 			continue
 		var safe = find_nearest_walkable_tile(int(data.get("x", 0)), int(data.get("y", 0)))
 		data["x"] = safe.x
 		data["y"] = safe.y
+		data["map_id"] = current_map_id
+		data["scoped_id"] = scoped_enemy_id
 		var enemy = EnemyScene.instantiate()
 		enemy.setup(data, TILE_SIZE)
 		enemy_layer.add_child(enemy)
@@ -478,13 +567,16 @@ func _spawn_interactables() -> void:
 	for data in items:
 		var item_id = str(data.get("id", ""))
 		var interaction_type = str(data.get("interaction_type", ""))
-		if WorldState.collected_items.has(item_id) or state.get("collected_resources", {}).has(item_id):
+		var scoped_item_id = get_scoped_object_id(item_id)
+		if state.get("collected_resources", {}).has(scoped_item_id):
 			continue
-		if interaction_type == "chest" and state.get("opened_chests", {}).has(item_id):
+		if interaction_type == "chest" and state.get("opened_chests", {}).has(scoped_item_id):
 			continue
 		var safe = find_nearest_walkable_tile(int(data.get("x", 0)), int(data.get("y", 0)))
 		data["x"] = safe.x
 		data["y"] = safe.y
+		data["map_id"] = current_map_id
+		data["scoped_id"] = scoped_item_id
 		var interactable = InteractableClass.new()
 		interactable.setup(data, TILE_SIZE)
 		layer.add_child(interactable)
@@ -526,6 +618,10 @@ func _setup_ui() -> void:
 		_hud.update_map_info(current_map_id, current_map_instance.display_name, current_map_instance.map_type)
 	if _hud != null and _hud.has_method("update_building_info"):
 		_hud.update_building_info(get_current_building_name())
+	if _hud != null and _hud.has_method("update_quest_info"):
+		_hud.update_quest_info(WorldState.get_quest_system().get_active_quests())
+	if _hud != null and _hud.has_method("show_debug_info"):
+		_hud.show_debug_info(debug_summary())
 	_dialogue_box = get_node_or_null("DialogueBox")
 
 
@@ -590,6 +686,24 @@ func _log_error(context: String, message: String) -> void:
 		var log = tree.root.get_node_or_null("GameLog")
 		if log != null and log.has_method("add_error"):
 			log.add_error(message)
+
+
+func _update_quest_visit_map(map_id: String) -> void:
+	if map_id == "":
+		return
+	var system = WorldState.get_quest_system()
+	system.update_objective({"type": "visit_map", "target_id": map_id, "map_id": map_id, "amount": 1})
+	WorldState.quest_state = system.to_save_data()
+	if _hud != null and _hud.has_method("update_quest_info"):
+		_hud.update_quest_info(system.get_active_quests())
+
+
+func _active_quest_count() -> int:
+	var data = WorldState.quest_state
+	if not (data is Dictionary):
+		return 0
+	var active = data.get("active_quests", {})
+	return active.size() if active is Dictionary else 0
 
 
 func get_player_node() -> Node:

@@ -1,0 +1,84 @@
+{
+	"quests": [
+		{
+			"quest_id": "defeat_wolves",
+			"title": "Clear the Back Hill Wolves",
+			"description": "The village notice board asks you to thin out the wolves near the forest road.",
+			"source_type": "quest_board",
+			"source_id": "village_notice_board",
+			"status": "available",
+			"objectives": [
+				{
+					"objective_id": "defeat_wolf_2",
+					"type": "defeat_enemy",
+					"target_type": "wolf",
+					"required": 2
+				}
+			],
+			"rewards": {
+				"coin": 10,
+				"progression_points": 10,
+				"faction_attitude": {"village": 3}
+			},
+			"required_flags": [],
+			"required_realm_order": 0,
+			"repeatable": false,
+			"map_scope": "forest_001"
+		},
+		{
+			"quest_id": "collect_herbs",
+			"title": "Gather Healing Herbs",
+			"description": "The apothecary needs fresh herbs for the village medicine shelf.",
+			"source_type": "quest_board",
+			"source_id": "village_notice_board",
+			"status": "available",
+			"objectives": [
+				{
+					"objective_id": "collect_herb_3",
+					"type": "collect_item",
+					"target_id": "herb",
+					"required": 3
+				}
+			],
+			"rewards": {
+				"coin": 5,
+				"items": {"potion": 1}
+			},
+			"required_flags": [],
+			"required_realm_order": 0,
+			"repeatable": false,
+			"map_scope": "village_001"
+		},
+		{
+			"quest_id": "explore_cave",
+			"title": "Investigate the Broken Cave",
+			"description": "Scout the old cave and report any sign of danger.",
+			"source_type": "quest_board",
+			"source_id": "village_notice_board",
+			"status": "available",
+			"objectives": [
+				{
+					"objective_id": "visit_cave",
+					"type": "visit_map",
+					"target_id": "cave_001",
+					"required": 1
+				},
+				{
+					"objective_id": "inspect_cave_entrance",
+					"type": "interact_object",
+					"target_id": "cave_entrance",
+					"required": 1
+				}
+			],
+			"rewards": {
+				"coin": 15,
+				"progression_points": 15,
+				"unlock_flags": ["cave_reported"]
+			},
+			"required_flags": [],
+			"required_realm_order": 0,
+			"repeatable": false,
+			"map_scope": "cave_001"
+		}
+	]
+}

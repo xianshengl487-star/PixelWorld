@@ -1,5 +1,79 @@
 # PixelWorld 测试报告
 
+## Latest Test Conclusion - v0.4.2
+
+- **Current version**: v0.4.2
+- **Test date**: 2026-06-28
+- **Godot version**: 4.7.stable.official.5b4e0cb0f
+- **CLI Build**: PASS (`--headless --path . --quit`)
+- **CLI SmokeTest**: PASS (`252/252 PASS`, `T001-T270`)
+- **JSON configuration parse**: PASS
+- **Editor GUI**: 未测：Codex could start process but cannot visually confirm editor window. Process id `375904` stayed alive during the short launch check, then was closed.
+- **Runtime GUI**: 未测：Codex could start process but cannot visually confirm runtime window. Process id `365664` stayed alive during the short launch check, then was closed.
+- **Manual F5 M031-M050**: 未测. No human visual confirmation was performed in this report.
+- **Conclusion**: PASS for CLI scope. v0.4.2 code health review, scoped map state isolation, safe map switching, save migration, building service gameplay, basic quest system, HUD debug hooks, and T211-T270 coverage are complete for automated scope.
+- **Non-failing runtime output**: `.env` missing warning keeps Mock mode, T114 intentionally requests a missing texture, T198/T222 intentionally request missing transition/map paths, and Godot headless may report known RID/ObjectDB cleanup warnings after SceneTree smoke tests.
+
+## v0.4.2 Verification Focus
+
+* `CODE_HEALTH_REPORT.md` records version consistency, audit scope, fixed risks, non-goals, and known warnings.
+* `ScopedId` creates `map_id::local_id` ids and prevents same local ids on different maps from sharing map state.
+* `GameWorld` no longer copies all global defeated/collected ids into the current map state, and map switching preserves the current map on failed targets.
+* `SaveManager` writes `save_version` and migrates older saves missing map, quest, equipment, training, and graph fields.
+* `BuildingService` implements healer, inn, shop, blacksmith, quest board, training, and storage behavior with deterministic local costs/effects.
+* `QuestSystem` loads `data/quests/basic_quests.json`, accepts quests, updates objectives, completes quests, turns them in, and persists quest state.
+* `GameHUD` exposes quest/debug display methods.
+* `RuntimeGuiChecklist.gd` exists as a helper script only; it does not replace manual visual validation.
+
+## v0.4.2 CLI Smoke Test Summary
+
+| Range | Result | Notes |
+|---|---:|---|
+| T001-T062 | 62/62 PASS | Original CLI/gameplay regressions |
+| T063-T080 | N/A | These numbers are intentionally not defined in SmokeTestRunner |
+| T081-T115 | 35/35 PASS | v0.3.0 progression and asset regressions |
+| T116-T155 | 40/40 PASS | v0.4.0 multi-map architecture regressions |
+| T156-T210 | 55/55 PASS | v0.4.1 building interior/runtime transition tests |
+| T211-T270 | 60/60 PASS | v0.4.2 health, state isolation, services, quests, HUD, docs |
+| Actual total | 252/252 PASS | SmokeTestRunner executed 252 tests |
+
+## v0.4.2 GUI And Manual Checks
+
+| Area | Status | Notes |
+|---|---|---|
+| CLI Build | PASS | `Godot_v4.7-stable_win64_console.exe --headless --path . --quit` |
+| CLI SmokeTest | PASS | `Godot_v4.7-stable_win64_console.exe --headless --path . --script res://scripts/tests/SmokeTestRunner.gd` |
+| Editor GUI | 未测 | Codex could start process but cannot visually confirm editor window. Process id `375904` stayed alive during the short launch check, then was closed. |
+| Runtime GUI | 未测 | Codex could start process but cannot visually confirm runtime window. Process id `365664` stayed alive during the short launch check, then was closed. |
+| Manual F5 M031-M050 | 未测 | Requires human visual confirmation in the Godot editor. |
+
+## v0.4.2 Manual F5 Checklist
+
+These checks require opening Godot, pressing F5, and visually confirming runtime behavior. They were not completed by Codex.
+
+| ID | Item | Status | Notes |
+|---|---|---|---|
+| M031 | Editor opens project without import/runtime error dialog | 未测 | Requires human visual confirmation |
+| M032 | F5 starts the main menu scene | 未测 | Requires human visual confirmation |
+| M033 | New world creation reaches GameWorld | 未测 | Requires human visual confirmation |
+| M034 | Player appears once and can move | 未测 | Requires human visual confirmation |
+| M035 | HUD health/stamina/progression text is readable | 未测 | Requires human visual confirmation |
+| M036 | Village resources render and can be approached | 未测 | Requires human visual confirmation |
+| M037 | Enemy encounter/death has no obvious runtime error | 未测 | Requires human visual confirmation |
+| M038 | Door/transition markers are visible and not visually confusing | 未测 | Requires human visual confirmation |
+| M039 | Village to apothecary interior transition works from player input | 未测 | Requires human visual confirmation |
+| M040 | Interior to village return places player near the correct door | 未测 | Requires human visual confirmation |
+| M041 | Healer service communicates cost/insufficient coin clearly | 未测 | Requires human visual confirmation |
+| M042 | Inn service restores health/stamina and advances time clearly | 未测 | Requires human visual confirmation |
+| M043 | Shop service opens expected goods flow | 未测 | Requires human visual confirmation |
+| M044 | Blacksmith upgrade flow is understandable | 未测 | Requires human visual confirmation |
+| M045 | Quest board shows available quests | 未测 | Requires human visual confirmation |
+| M046 | Quest progress text updates after objective events | 未测 | Requires human visual confirmation |
+| M047 | Save/load preserves current map and quest state | 未测 | Requires human visual confirmation |
+| M048 | Missing transition/map errors do not lock the runtime | 未测 | Requires human visual confirmation |
+| M049 | Debug summary/checklist can be run without replacing manual QA | 未测 | Helper only |
+| M050 | Repeated map switching does not duplicate Player or corrupt map state | 未测 | Requires human visual confirmation |
+
 ## Latest Test Conclusion - v0.4.1
 
 - **Current version**: v0.4.1

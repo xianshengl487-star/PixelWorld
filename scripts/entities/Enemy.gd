@@ -6,6 +6,8 @@ const StatsClass = preload("res://scripts/entities/Stats.gd")
 const CombatSystemClass = preload("res://scripts/combat/CombatSystem.gd")
 const HealthBarClass = preload("res://scripts/ui/HealthBar.gd")
 const AssetResolverClass = preload("res://scripts/assets/AssetResolver.gd")
+const ScopedIdClass = preload("res://scripts/core/ScopedId.gd")
+const MapStateClass = preload("res://scripts/map/MapState.gd")
 
 @export var enemy_id: String = ""
 @export var display_name: String = "敌人"
@@ -15,6 +17,8 @@ const AssetResolverClass = preload("res://scripts/assets/AssetResolver.gd")
 @export var attack_interval: float = 1.0
 
 var stats = null
+var map_id: String = ""
+var scoped_id: String = ""
 var _tile_size: int = 32
 var _attack_timer: float = 0.0
 var _sprite: ColorRect = null
@@ -35,6 +39,8 @@ func setup(data: Dictionary, tile_size: int = 32) -> void:
 	enemy_id = data.get("id", enemy_id)
 	display_name = data.get("display_name", data.get("name", display_name))
 	enemy_type = data.get("enemy_type", data.get("type", enemy_type))
+	map_id = str(data.get("map_id", WorldState.current_map_id))
+	scoped_id = str(data.get("scoped_id", ScopedIdClass.new().make(map_id, enemy_id)))
 	_tile_size = tile_size
 	var x = float(data.get("x", 0))
 	var y = float(data.get("y", 0))
@@ -115,7 +121,9 @@ func _on_health_changed(current: int, max_value: int) -> void:
 
 
 func _on_died() -> void:
-	WorldState.mark_enemy_defeated(enemy_id)
+	_mark_map_defeated()
+	WorldState.mark_enemy_defeated(scoped_id)
+	WorldState.update_quest_objective({"type": "defeat_enemy", "target_id": enemy_id, "enemy_type": enemy_type, "target_type": enemy_type, "map_id": map_id, "amount": 1})
 	_drop_loot()
 	GameLog.add_entry("%s倒下了。" % display_name)
 	hide()
@@ -131,6 +139,15 @@ func _drop_loot() -> void:
 			WorldState.add_item("coin", 3)
 		_:
 			WorldState.add_item("herb", 1)
+
+
+func _mark_map_defeated() -> void:
+	var state = MapStateClass.new()
+	state.load_save_data(WorldState.get_map_state(map_id))
+	state.map_id = map_id
+	state.mark_visited()
+	state.mark_enemy_defeated(scoped_id)
+	WorldState.set_map_state(map_id, state.to_save_data())
 
 
 func _find_player():

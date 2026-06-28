@@ -1,5 +1,5 @@
 extends SceneTree
-## SmokeTestRunner.gd — CLI 自动化冒烟测试  v0.4.1
+## SmokeTestRunner.gd — CLI 自动化冒烟测试  v0.4.2
 ## 运行: godot --headless --path . --script res://scripts/tests/SmokeTestRunner.gd
 
 const AIClientClass = preload("res://scripts/ai/AIClient.gd")
@@ -33,6 +33,8 @@ const BuildingServiceClass = preload("res://scripts/buildings/BuildingService.gd
 const InteriorMapGeneratorClass = preload("res://scripts/buildings/InteriorMapGenerator.gd")
 const DoorInteractionClass = preload("res://scripts/buildings/DoorInteraction.gd")
 const TransitionAreaClass = preload("res://scripts/map/TransitionArea.gd")
+const ScopedIdClass = preload("res://scripts/core/ScopedId.gd")
+const QuestSystemClass = preload("res://scripts/quests/QuestSystem.gd")
 const TEST_SEED: int = 42
 
 var _results: Array = []
@@ -48,7 +50,7 @@ var _save_manager = null
 
 func _init() -> void:
 	print("=".repeat(60))
-	print("  PixelWorld CLI Smoke Test Runner  v0.4.1  (seed=%d)" % TEST_SEED)
+	print("  PixelWorld CLI Smoke Test Runner  v0.4.2  (seed=%d)" % TEST_SEED)
 	print("=".repeat(60))
 	
 	await process_frame; await process_frame
@@ -164,6 +166,15 @@ func _run_all_tests() -> void:
 	await _t195(); _t196(); _t197(); await _t198(); await _t199(); _t200()
 	await _t201(); await _t202(); await _t203(); await _t204(); await _t205()
 	await _t206(); await _t207(); _t208(); _t209(); _t210()
+	_t211(); _t212(); _t213(); _t214(); await _t215(); _t216(); _t217()
+	_t218(); await _t219(); await _t220(); await _t221(); await _t222()
+	await _t223(); await _t224(); _t225(); _t226(); _t227(); _t228()
+	_t229(); _t230(); _t231(); _t232(); _t233(); _t234(); _t235()
+	_t236(); _t237(); _t238(); _t239(); _t240(); _t241(); _t242()
+	_t243(); _t244(); _t245(); _t246(); await _t247(); _t248(); _t249()
+	_t250(); _t251(); _t252(); _t253(); _t254(); _t255(); _t256(); _t257()
+	_t258(); _t259(); await _t260(); await _t261(); await _t262(); await _t263()
+	_t264(); _t265(); _t266(); _t267(); _t268(); _t269(); _t270()
 
 func _t001(): _record("T001", "project.godot 存在", FileAccess.file_exists("res://project.godot"))
 func _t002(): _record("T002", "MainMenu.tscn 可加载", _scene_loadable("res://scenes/MainMenu.tscn"))
@@ -448,11 +459,11 @@ func _t040() -> void:
 		return
 	var enemy = scene.instantiate()
 	root.add_child(enemy)
-	enemy.setup({"id": "smoke_enemy", "display_name": "测试史莱姆", "enemy_type": "slime", "x": 1, "y": 1}, 32)
+	enemy.setup({"id": "smoke_enemy", "display_name": "测试史莱姆", "enemy_type": "slime", "map_id": "smoke_map", "x": 1, "y": 1}, 32)
 	await _wait_frame()
 	enemy.take_damage(999)
 	await _wait_frame()
-	var ok = _world_state.defeated_enemies.has("smoke_enemy")
+	var ok = _world_state.defeated_enemies.has("smoke_map::smoke_enemy")
 	if is_instance_valid(enemy):
 		enemy.queue_free()
 	await _wait_frame()
@@ -1227,6 +1238,7 @@ func _t162() -> void:
 	if stats != null:
 		stats.take_damage(9)
 	_world_state.player_health = 3
+	_world_state.add_item("coin", 3)
 	var service = BuildingServiceClass.new()
 	service.setup({"service_id": "healer_001", "service_type": "healer"})
 	var result = service.use_service(player, _world_state)
@@ -1653,6 +1665,480 @@ func _t209() -> void:
 func _t210() -> void:
 	var text = _read_text("res://TEST_REPORT.md")
 	_record("T210", "TEST_REPORT documents T156-T210", "T156-T210" in text)
+
+
+func _t211() -> void:
+	_record("T211", "CODE_HEALTH_REPORT.md exists", FileAccess.file_exists("res://CODE_HEALTH_REPORT.md"))
+
+
+func _t212() -> void:
+	var text = _read_text("res://CODE_HEALTH_REPORT.md")
+	_record("T212", "Version consistency check is recorded", "Version Consistency" in text and "v0.4.2" in text)
+
+
+func _t213() -> void:
+	_record("T213", "ScopedId can create map_id::local_id", ScopedIdClass.new().make("forest_001", "herb_01") == "forest_001::herb_01")
+
+
+func _t214() -> void:
+	var data = ScopedIdClass.new().split("forest_001::herb_01")
+	_record("T214", "ScopedId can split scoped id", data.get("map_id", "") == "forest_001" and data.get("local_id", "") == "herb_01")
+
+
+func _t215() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = gw != null and gw.get_scoped_object_id("herb_01") == "village_001::herb_01"
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T215", "GameWorld get_scoped_object_id works", ok)
+
+
+func _t216() -> void:
+	var state = MapStateClass.new()
+	state.setup({"map_id": "village_001"})
+	state.mark_enemy_defeated("forest_001::enemy_wolf_01")
+	var data = state.to_save_data()
+	_record("T216", "MapState does not mark other-map enemy as local id", not data.get("defeated_enemies", {}).has("enemy_wolf_01"))
+
+
+func _t217() -> void:
+	var state = MapStateClass.new()
+	state.setup({"map_id": "village_001"})
+	state.mark_resource_collected("forest_001::herb_01")
+	var data = state.to_save_data()
+	_record("T217", "MapState does not mark other-map resource as local id", not data.get("collected_resources", {}).has("herb_01"))
+
+
+func _t218() -> void:
+	var scoped = ScopedIdClass.new()
+	var village = scoped.make("village_001", "herb_01")
+	var forest = scoped.make("forest_001", "herb_01")
+	_record("T218", "Same local id on different maps is isolated", village != forest)
+
+
+func _t219() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		_world_state.defeated_enemies = ["forest_001::enemy_wolf_01"]
+		gw.save_current_map_state()
+		ok = not _world_state.get_map_state("village_001").get("defeated_enemies", {}).has("forest_001::enemy_wolf_01")
+		gw.queue_free()
+		await _wait_frame()
+	_record("T219", "save_current_map_state no longer copies all global defeated_enemies", ok)
+
+
+func _t220() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		_world_state.collected_items = ["forest_001::herb_01"]
+		gw.save_current_map_state()
+		ok = not _world_state.get_map_state("village_001").get("collected_resources", {}).has("forest_001::herb_01")
+		gw.queue_free()
+		await _wait_frame()
+	_record("T220", "save_current_map_state no longer copies all global collected_items", ok)
+
+
+func _t221() -> void:
+	var text = _read_text("res://scripts/ui/GameWorld.gd")
+	_record("T221", "switch_map avoids second save through load_map skip flag", "load_map(target_map_id, target_spawn_id, true)" in text)
+
+
+func _t222() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		var before = gw.get_current_map_id()
+		ok = not gw.switch_map("missing_map", "default") and gw.get_current_map_id() == before
+		gw.queue_free()
+		await _wait_frame()
+	_record("T222", "switch_map failure keeps current_map_id", ok)
+
+
+func _t223() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		gw.load_map("forest_001", "missing_spawn", false, true)
+		var spawn = gw.current_map_instance.get_spawn_point("default")
+		ok = Vector2i(int(_world_state.player_position.x), int(_world_state.player_position.y)) == spawn
+		gw.queue_free()
+		await _wait_frame()
+	_record("T223", "Missing target spawn falls back to default", ok)
+
+
+func _t224() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		var before = gw.current_map_instance
+		gw.load_map("village_001")
+		ok = before == gw.current_map_instance
+		gw.queue_free()
+		await _wait_frame()
+	_record("T224", "load_map same map does not rebuild by default", ok)
+
+
+func _t225() -> void:
+	var service = BuildingServiceClass.new()
+	service.setup({"service_type": "healer", "required_flags": ["missing"]})
+	var ok = not service.can_use(RefCounted.new()).get("ok", true)
+	_record("T225", "BuildingService can_use missing global_flags does not crash", ok)
+
+
+func _t226() -> void:
+	_world_state.reset_state()
+	_world_state.player_health = 1
+	var service = BuildingServiceClass.new()
+	service.setup({"service_type": "healer"})
+	var result = service.use_service(null, _world_state)
+	_record("T226", "healer consumes coin or returns insufficient prompt", not result.get("ok", true) and result.get("error", "") == "not_enough_coin")
+
+
+func _t227() -> void:
+	_world_state.reset_state()
+	_world_state.add_item("coin", 3)
+	_world_state.player_health = 2
+	var service = BuildingServiceClass.new()
+	service.setup({"service_type": "healer"})
+	var result = service.use_service(null, _world_state)
+	_record("T227", "healer restores health", result.get("ok", false) and _world_state.player_health == _world_state.player_max_health)
+
+
+func _t228() -> void:
+	_world_state.reset_state()
+	_world_state.add_item("coin", 5)
+	_world_state.player_health = 2
+	_world_state.player_stamina = 1
+	var service = BuildingServiceClass.new()
+	service.setup({"service_type": "inn"})
+	var result = service.use_service(null, _world_state)
+	_record("T228", "inn restores health and stamina", result.get("ok", false) and _world_state.player_health == _world_state.player_max_health and _world_state.player_stamina == _world_state.player_max_stamina)
+
+
+func _t229() -> void:
+	_world_state.reset_state()
+	_world_state.add_item("coin", 5)
+	var service = BuildingServiceClass.new()
+	service.setup({"service_type": "inn"})
+	var before_day = _world_state.current_day
+	var result = service.use_service(null, _world_state)
+	_record("T229", "inn advances time", result.get("ok", false) and _world_state.current_day == before_day + 1 and _world_state.current_hour == 6)
+
+
+func _t230() -> void:
+	var service = BuildingServiceClass.new()
+	service.setup({"service_type": "shop"})
+	_record("T230", "shop get_goods returns goods", service.get_goods().size() >= 4)
+
+
+func _t231() -> void:
+	_world_state.reset_state()
+	_world_state.add_item("coin", 4)
+	var service = BuildingServiceClass.new()
+	service.setup({"service_type": "shop"})
+	var result = service.buy_item("potion", 1, _world_state)
+	_record("T231", "shop buy_item can buy potion", result.get("ok", false) and _world_state.has_item("potion", 1))
+
+
+func _t232() -> void:
+	_world_state.reset_state()
+	var service = BuildingServiceClass.new()
+	service.setup({"service_type": "shop"})
+	var result = service.buy_item("potion", 1, _world_state)
+	_record("T232", "shop buy_item fails without coin", not result.get("ok", true) and result.get("error", "") == "not_enough_coin")
+
+
+func _t233() -> void:
+	_world_state.reset_state()
+	_record("T233", "WorldState can initialize equipment_state", _world_state.equipment_state is Dictionary and _world_state.equipment_state.is_empty())
+
+
+func _t234() -> void:
+	_world_state.reset_state()
+	_world_state.add_item("coin", 10)
+	_world_state.add_item("iron_ore", 1)
+	var service = BuildingServiceClass.new()
+	service.setup({"service_type": "blacksmith"})
+	var result = service.upgrade_weapon_level(_world_state)
+	_record("T234", "blacksmith can upgrade weapon_level", result.get("ok", false) and int(_world_state.equipment_state.get("weapon_level", 0)) == 1)
+
+
+func _t235() -> void:
+	_world_state.reset_state()
+	_world_state.add_item("coin", 2)
+	var before = int(_world_state.progression_data.get("current_progress", 0))
+	var service = BuildingServiceClass.new()
+	service.setup({"service_type": "training"})
+	var result = service.use_service(null, _world_state)
+	_record("T235", "training adds progression points", result.get("ok", false) and int(_world_state.progression_data.get("current_progress", 0)) > before)
+
+
+func _t236() -> void:
+	_world_state.reset_state()
+	var service = BuildingServiceClass.new()
+	service.setup({"service_type": "storage", "owner_building_id": "warehouse_001"})
+	var result = service.use_service(null, _world_state)
+	_record("T236", "storage service does not crash", result.get("ok", false) and _world_state.building_states.has("warehouse_001"))
+
+
+func _t237() -> void:
+	var service = BuildingServiceClass.new()
+	service.setup({"service_type": "quest_board"})
+	var result = service.use_service(null, _world_state)
+	_record("T237", "quest_board returns quests", result.get("ok", false) and result.get("quests", []).size() >= 3)
+
+
+func _t238() -> void:
+	var system = QuestSystemClass.new()
+	var result = system.load_quests()
+	_record("T238", "QuestSystem loads basic_quests.json", result.get("ok", false))
+
+
+func _t239() -> void:
+	var data = JSON.parse_string(_read_text("res://data/quests/basic_quests.json"))
+	_record("T239", "basic_quests has at least three quests", data is Dictionary and data.get("quests", []).size() >= 3)
+
+
+func _t240() -> void:
+	var system = _fresh_quest_system()
+	var result = system.accept_quest("defeat_wolves")
+	_record("T240", "QuestSystem accepts defeat_wolves", result.get("ok", false) and system.active_quests.has("defeat_wolves"))
+
+
+func _t241() -> void:
+	var system = _fresh_quest_system()
+	system.accept_quest("defeat_wolves")
+	system.update_objective({"type": "defeat_enemy", "enemy_type": "wolf", "target_type": "wolf", "amount": 1})
+	var quest = system.active_quests.get("defeat_wolves", null)
+	var ok = quest != null and quest.objectives[0].progress == 1
+	_record("T241", "QuestSystem updates defeat_enemy objective", ok)
+
+
+func _t242() -> void:
+	var system = _fresh_quest_system()
+	system.accept_quest("defeat_wolves")
+	system.update_objective({"type": "defeat_enemy", "enemy_type": "wolf", "target_type": "wolf", "amount": 2})
+	_record("T242", "QuestSystem completes defeat_wolves", system.completed_quests.has("defeat_wolves"))
+
+
+func _t243() -> void:
+	var system = _fresh_quest_system()
+	var result = system.accept_quest("collect_herbs")
+	_record("T243", "QuestSystem accepts collect_herbs", result.get("ok", false) and system.active_quests.has("collect_herbs"))
+
+
+func _t244() -> void:
+	var system = _fresh_quest_system()
+	system.accept_quest("collect_herbs")
+	system.update_objective({"type": "collect_item", "target_id": "herb", "item_id": "herb", "amount": 2})
+	var quest = system.active_quests.get("collect_herbs", null)
+	var ok = quest != null and quest.objectives[0].progress == 2
+	_record("T244", "QuestSystem updates collect_item objective", ok)
+
+
+func _t245() -> void:
+	var system = _fresh_quest_system()
+	system.accept_quest("collect_herbs")
+	system.update_objective({"type": "collect_item", "target_id": "herb", "item_id": "herb", "amount": 3})
+	_record("T245", "QuestSystem completes collect_herbs", system.completed_quests.has("collect_herbs"))
+
+
+func _t246() -> void:
+	var system = _fresh_quest_system()
+	var result = system.accept_quest("explore_cave")
+	_record("T246", "QuestSystem accepts explore_cave", result.get("ok", false) and system.active_quests.has("explore_cave"))
+
+
+func _t247() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		var system = _fresh_quest_system()
+		system.accept_quest("explore_cave")
+		_world_state.quest_state = system.to_save_data()
+		gw.load_map("cave_001", "default", false, true)
+		var reloaded = _world_state.get_quest_system()
+		var quest = reloaded.active_quests.get("explore_cave", null)
+		ok = quest != null and quest.objectives[0].progress >= 1
+		gw.queue_free()
+		await _wait_frame()
+	_record("T247", "GameWorld load_map cave_001 triggers visit_map objective", ok)
+
+
+func _t248() -> void:
+	_world_state.reset_state()
+	var system = _fresh_quest_system()
+	system.accept_quest("defeat_wolves")
+	system.update_objective({"type": "defeat_enemy", "enemy_type": "wolf", "target_type": "wolf", "amount": 2})
+	var result = system.turn_in_quest("defeat_wolves")
+	_record("T248", "QuestSystem turn_in_quest grants coin", result.get("ok", false) and _world_state.has_item("coin", 10))
+
+
+func _t249() -> void:
+	_world_state.reset_state()
+	var system = _fresh_quest_system()
+	system.accept_quest("collect_herbs")
+	system.update_objective({"type": "collect_item", "target_id": "herb", "item_id": "herb", "amount": 3})
+	var result = system.turn_in_quest("collect_herbs")
+	_record("T249", "QuestSystem turn_in_quest grants item", result.get("ok", false) and _world_state.has_item("potion", 1))
+
+
+func _t250() -> void:
+	if _save_manager == null:
+		_record("T250", "SaveManager saves quest_state", false, "SaveManager missing")
+		return
+	_world_state.quest_state = {"active_quests": {"collect_herbs": {"quest_id": "collect_herbs", "status": "active"}}}
+	var ok = _save_manager.save_game("smoke_quests") and _save_manager.has_save("smoke_quests")
+	_record("T250", "SaveManager saves quest_state", ok)
+
+
+func _t251() -> void:
+	if _save_manager == null:
+		_record("T251", "SaveManager loads quest_state", false, "SaveManager missing")
+		return
+	_world_state.quest_state.clear()
+	var result = _save_manager.load_game("smoke_quests")
+	var ok = result.get("ok", false) and _world_state.quest_state.get("active_quests", {}).has("collect_herbs")
+	_save_manager.delete_save("smoke_quests")
+	_record("T251", "SaveManager loads quest_state", ok)
+
+
+func _t252() -> void:
+	var data = _save_manager._collect_save_data() if _save_manager != null else {}
+	_record("T252", "SaveManager supports save_version 0.4.2", data.get("save_version", "") == "0.4.2")
+
+
+func _t253() -> void:
+	var data = _save_manager.migrate_save_data({"world_name": "Old"}) if _save_manager != null else {}
+	_record("T253", "SaveManager migrates save without save_version", data.get("save_version", "") != "" and data.has("current_map_id"))
+
+
+func _t254() -> void:
+	var data = _save_manager.migrate_save_data({"world_name": "Old", "current_map_id": "village_001"}) if _save_manager != null else {}
+	_record("T254", "SaveManager migrates save missing map_states", data.get("map_states", null) is Dictionary)
+
+
+func _t255() -> void:
+	var data = _save_manager.migrate_save_data({"world_name": "Old", "current_map_id": "village_001"}) if _save_manager != null else {}
+	_record("T255", "SaveManager migrates save missing quest_state", data.get("quest_state", null) is Dictionary)
+
+
+func _t256() -> void:
+	_record("T256", "WorldState has equipment_state", _world_state.get("equipment_state") is Dictionary)
+
+
+func _t257() -> void:
+	_record("T257", "WorldState has quest_state", _world_state.get("quest_state") is Dictionary)
+
+
+func _t258() -> void:
+	var hud_scene = load("res://scenes/ui/GameHUD.tscn")
+	var hud = hud_scene.instantiate() if hud_scene != null else null
+	var ok = hud != null and hud.has_method("update_quest_info")
+	if hud != null:
+		hud.queue_free()
+	_record("T258", "GameHUD has update_quest_info", ok)
+
+
+func _t259() -> void:
+	var hud_scene = load("res://scenes/ui/GameHUD.tscn")
+	var hud = hud_scene.instantiate() if hud_scene != null else null
+	var ok = hud != null and hud.has_method("show_debug_info")
+	if hud != null:
+		hud.queue_free()
+	_record("T259", "GameHUD has show_debug_info or DebugOverlay exists", ok or FileAccess.file_exists("res://scripts/ui/DebugOverlay.gd"))
+
+
+func _t260() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = gw != null and gw.debug_summary().get("current_map_id", "") == "village_001"
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T260", "GameWorld debug_summary returns current_map_id", ok)
+
+
+func _t261() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = gw != null and gw.debug_summary().get("player_tile", {}) is Dictionary
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T261", "GameWorld debug_summary returns player position", ok)
+
+
+func _t262() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = gw != null and int(gw.debug_summary().get("transition_count", -1)) >= 0
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T262", "GameWorld debug_summary returns transition_count", ok)
+
+
+func _t263() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = gw != null and int(gw.debug_summary().get("building_count", -1)) >= 0
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T263", "GameWorld debug_summary returns building_count", ok)
+
+
+func _t264() -> void:
+	if _game_log != null:
+		_game_log.clear()
+	_world_state.reset_state()
+	_world_state.add_item("coin", 3)
+	var service = BuildingServiceClass.new()
+	service.setup({"service_type": "healer"})
+	service.use_service(null, _world_state)
+	_record("T264", "GameLog records healer use", _log_contains("Healer"))
+
+
+func _t265() -> void:
+	if _game_log != null:
+		_game_log.clear()
+	var system = _fresh_quest_system()
+	system.accept_quest("defeat_wolves")
+	_record("T265", "GameLog records quest accepted", _log_contains("Quest accepted"))
+
+
+func _t266() -> void:
+	if _game_log != null:
+		_game_log.clear()
+	var system = _fresh_quest_system()
+	system.accept_quest("defeat_wolves")
+	system.update_objective({"type": "defeat_enemy", "enemy_type": "wolf", "target_type": "wolf", "amount": 2})
+	_record("T266", "GameLog records quest completed", _log_contains("Quest completed"))
+
+
+func _t267() -> void:
+	var text = _read_text("res://TEST_REPORT.md")
+	_record("T267", "TEST_REPORT contains M031-M050", "M031" in text and "M050" in text)
+
+
+func _t268() -> void:
+	var text = _read_text("res://README.md")
+	_record("T268", "README updated to v0.4.2", "v0.4.2" in text)
+
+
+func _t269() -> void:
+	var text = _read_text("res://DEV_LOG.md")
+	_record("T269", "DEV_LOG updated to v0.4.2", "v0.4.2" in text)
+
+
+func _t270() -> void:
+	_record("T270", "GAMEPLAY_QUESTS.md exists", FileAccess.file_exists("res://GAMEPLAY_QUESTS.md"))
+
+
+func _fresh_quest_system():
+	var system = QuestSystemClass.new()
+	system.load_quests()
+	return system
 
 
 func _sample_interior_map():
