@@ -1,6 +1,69 @@
 # PixelWorld 测试报告
 
-## 最新测试结论
+## Latest Test Conclusion - v0.4.1
+
+- **Current version**: v0.4.1
+- **Test time**: 2026-06-28
+- **Godot version**: 4.7.stable.official.5b4e0cb0f
+- **Test mode**: CLI headless (`--script res://scripts/tests/SmokeTestRunner.gd`)
+- **JSON configuration parse**: PASS
+- **CLI compile validation**: PASS
+- **SmokeTestRunner**: 192/192 PASS (100%)
+- **v0.4.0 regression range**: T116-T155 all PASS
+- **v0.4.1 new range**: T156-T210 all PASS
+- **T025 rerun**: PASS. The GameWorld player node exists after CLI headless initialization.
+- **T028 rerun**: PASS. Obstacle collision nodes exist.
+- **Manual editor F5 validation**: not executed in this report.
+- **Non-failing runtime output**: `.env` missing warning keeps Mock mode, T114 intentionally requests a missing texture, T198 intentionally requests a missing transition, and Godot reports known headless exit RID/ObjectDB cleanup warnings.
+- **Conclusion**: PASS for CLI scope. v0.4.1 building interiors, village building content, runtime village <-> interior transitions, MapState/SaveManager strengthening, HUD/log updates, and regression tests are complete for this milestone.
+
+## v0.4.1 Verification Focus
+
+* `BuildingRegistry` loads required templates: chief house, apothecary, blacksmith, inn, general store, sect gate, task hall, training hall, warehouse, and player home placeholder.
+* `BuildingService` supports deterministic local services including healer and inn restore behavior.
+* `InteriorMapGenerator` creates interior maps with default spawns, exit spawns, service POIs, NPC placeholders, and return transitions.
+* `MapInstanceGenerator` places road-connected village buildings with `building_id`, `building_type`, `position`, `size`, `door_position`, `interior_map_id`, and `services`.
+* `MockProvider` includes interior map nodes and village <-> interior connections in the default WorldGraph blueprint.
+* `GameWorld` can load the village, switch into an interior, return to the village door spawn, preserve a single Player node, and update visited/map state.
+* `MapState` and `SaveManager` persist `building_states` and `last_player_position`, while old saves with missing map/building fields do not crash.
+* `GameHUD` exposes map/building/transition update methods, and `GameLog` records building entry/return events.
+* Documentation has been updated for v0.4.1 and `T156-T210`.
+
+## v0.4.1 CLI Smoke Test Summary
+
+| Range | Result | Notes |
+|---|---:|---|
+| T001-T062 | 62/62 PASS | T025 and T028 both pass in this run |
+| T063-T080 | N/A | These numbers are intentionally not defined in SmokeTestRunner |
+| T081-T115 | 35/35 PASS | v0.3.0 progression and asset regressions |
+| T116-T155 | 40/40 PASS | v0.4.0 multi-map architecture regressions |
+| T156-T210 | 55/55 PASS | v0.4.1 building interior/runtime transition tests |
+| Actual total | 192/192 PASS | SmokeTestRunner executed 192 tests |
+
+## v0.4.1 Manual Editor Checks
+
+These checks require opening Godot and pressing F5. They were not executed during this CLI-only report.
+
+| ID | Item | Status | Notes |
+|---|---|---|---|
+| M015 | Enter chief house through village door | 未测 | Requires Godot editor F5 |
+| M016 | Return from chief house to village door | 未测 | Requires Godot editor F5 |
+| M017 | Enter apothecary through village door | 未测 | Requires Godot editor F5 |
+| M018 | Apothecary healer service prompt/UX | 未测 | Requires Godot editor F5 |
+| M019 | Enter blacksmith through village door | 未测 | Requires Godot editor F5 |
+| M020 | Enter inn through village door | 未测 | Requires Godot editor F5 |
+| M021 | Enter general store through village door | 未测 | Requires Godot editor F5 |
+| M022 | Door markers do not visually overlap player/HUD | 未测 | Requires Godot editor F5 |
+| M023 | Village roads connect cleanly to building doors | 未测 | Requires Godot editor F5 |
+| M024 | Player movement/camera remains smooth after map switch | 未测 | Requires Godot editor F5 |
+| M025 | Building interior collision feels correct | 未测 | Requires Godot editor F5 |
+| M026 | HUD map/building text is readable | 未测 | Requires Godot editor F5 |
+| M027 | Transition message appears after switching maps | 未测 | Requires Godot editor F5 |
+| M028 | Save/load after entering an interior restores safely | 未测 | Requires Godot editor F5 |
+| M029 | Old save file loads without crash in editor flow | 未测 | Requires Godot editor F5 |
+| M030 | Repeated village/interior switching does not duplicate Player | 未测 | Requires Godot editor F5 |
+
+## v0.4.0 Previous Test Conclusion
 
 - **当前版本**: v0.4.0
 - **测试时间**: 2026-06-28 01:56

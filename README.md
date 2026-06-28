@@ -1,10 +1,10 @@
 # PixelWorld
 
-PixelWorld is a Godot 4.7 top-down pixel RPG prototype. The current version is **v0.4.0**, focused on a Pokemon/Stardew-style multi-map world architecture: a world is no longer a single 64x64 field, but a graph of named maps with transitions, per-map state, and basic building placement.
+PixelWorld is a Godot 4.7 top-down pixel RPG prototype. The current version is **v0.4.1**, focused on building interiors, deeper village content, runtime map switching, and stronger per-map save state on top of the Pokemon/Stardew-style multi-map architecture introduced in v0.4.0.
 
 ## Current Version
 
-- Version: `v0.4.0`
+- Version: `v0.4.1`
 - Engine: Godot `4.7.stable`
 - AI mode: Mock/local only
 - Real MiMo / NVIDIA API integration: paused
@@ -17,17 +17,38 @@ PixelWorld is a Godot 4.7 top-down pixel RPG prototype. The current version is *
 - Main menu to create or continue a world
 - Mock world blueprint generation
 - Legacy 64x64 generated map path retained for old tests and fallback
-- New `WorldGraph` with multiple connected maps
+- New `WorldGraph` with multiple connected maps, including building interior map nodes
 - New `MapInstance` data model for village, forest, cave, sect gate, interiors, and secret realms
 - New `MapTransition` / `TransitionArea` support for map exits and target spawn points
-- New per-map `MapState` persistence for opened chests, collected resources, defeated enemies, local flags, and visited state
+- New per-map `MapState` persistence for opened chests, collected resources, defeated enemies, triggered events, solved puzzles, NPC states, building states, dynamic objects, last player position, and visited state
 - New `MapInstanceGenerator` and `MapTypeRuleLoader` using `data/map_generation/map_type_rules.json`
-- New building template pipeline using `BuildingTemplate`, `BuildingInstance`, `BuildingPlacementValidator`, and `data/buildings/building_templates.json`
+- Building template and service pipeline using `BuildingTemplate`, `BuildingInstance`, `BuildingPlacementValidator`, `BuildingRegistry`, `BuildingService`, `InteriorMapGenerator`, `DoorInteraction`, and `data/buildings/building_templates.json`
+- Village generation now places chief house, apothecary, blacksmith, inn, and general store buildings with doors, services, interior map ids, and road-connected entrances
+- Building interiors are generated as separate `interior` maps with default/exit spawns, service POIs, NPC placeholders, and return transitions
 - Runtime `GameWorld` loading/unloading maps through `load_map()` and `switch_map()`
-- JSON save/load through `SaveManager`, now including map id, visited maps, map states, world graph data, and per-map player positions
+- JSON save/load through `SaveManager`, now including map id, visited maps, map states, world graph data, per-map player positions, last spawn id, and building states
 - Player movement, HP, stamina, attack, damage, death, respawn, NPCs, enemies, interactions, inventory, HUD, and progression summary
 - Program-generated placeholder pixel assets
 - v0.3.0 world progression templates retained for xianxia, magic, apocalypse, cyberpunk, wuxia, urban ability, strange tale, and star sci worlds
+
+## v0.4.1 Building Interiors And Runtime Transitions
+
+v0.4.1 turns village buildings into actual world graph destinations instead of simple outdoor markers.
+
+- `BuildingRegistry` loads `data/buildings/building_templates.json` and creates placed building dictionaries with stable ids, doors, services, access rules, and `interior_map_id`.
+- `InteriorMapGenerator` creates MVP interior maps for chief house, apothecary, blacksmith, inn, and general store.
+- `BuildingService` provides deterministic local services such as healer, inn rest, shop placeholder, blacksmith placeholder, quest board, training, and storage.
+- `DoorInteraction` and `TransitionArea` connect runtime triggers to `GameWorld.request_map_transition()` and `GameWorld.switch_map()`.
+- `MockProvider` now inserts building interior maps into the default blueprint and adds village <-> interior connections.
+- `GameWorld` now keeps one player node across map loads, creates runtime layers on demand, renders building/transition layers, updates HUD map/building text, logs building entry/return, and saves the current map state before switching.
+
+Default village interiors currently include:
+
+- `chief_house_001_interior`
+- `apothecary_001_interior`
+- `blacksmith_001_interior`
+- `inn_001_interior`
+- `general_store_001_interior`
 
 ## v0.4.0 Map Architecture
 
@@ -46,6 +67,7 @@ Default mock worlds currently include:
 - `forest_001` - exploration field, enemies, resources, cave/sect routes
 - `cave_001` - dungeon-style side map
 - `sect_gate_001` - faction entrance template
+- building interiors linked from `village_001` doors
 
 See `GAMEPLAY_MAP_ARCHITECTURE.md` for the fuller design notes.
 
@@ -85,6 +107,7 @@ python tools\generate_pixel_assets.py
 ## 玩法路线图
 
 - v0.4.0: establish multi-map world graph, map switching, per-map state, and building templates.
+- v0.4.1: add building interiors, village door transitions, map-state strengthening, T025 cleanup, and T156-T210 regression coverage.
 - v0.4.x: add more authored map types, richer interior maps, and more transition unlock rules.
 - v0.5.x: connect progression rewards to real combat/exploration loops and tune breakthrough costs.
 - v0.6.x: replace more ColorRect placeholders with generated tile/item sprites.
@@ -94,16 +117,17 @@ python tools\generate_pixel_assets.py
 
 ## Test Status
 
-Latest recorded result for v0.4.0:
+Latest recorded result for v0.4.1:
 
 - JSON parse validation: PASS
 - CLI compile validation: PASS
-- SmokeTestRunner: `136/137 PASS`
+- SmokeTestRunner: `192/192 PASS`
 - New v0.4.0 tests `T116-T155`: `40/40 PASS`
-- Retained old test result: `T025` remains FAIL in CLI headless mode
+- New v0.4.1 tests `T156-T210`: `55/55 PASS`
+- `T025` result in this run: PASS
 - `T028` result in this run: PASS
 
-`T025` is retained as a CLI headless SceneTree/initialization verification issue. It needs Godot editor F5 manual validation before being marked fixed.
+Manual Godot editor F5 validation was not executed in this CLI pass; manual checks remain marked as untested in `TEST_REPORT.md`.
 
 Run smoke tests:
 

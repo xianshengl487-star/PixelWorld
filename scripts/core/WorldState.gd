@@ -19,6 +19,7 @@ var visited_maps: Dictionary = {}
 var map_states: Dictionary = {}
 var world_graph_data: Dictionary = {}
 var global_flags: Dictionary = {}
+var building_states: Dictionary = {}
 var player_position_by_map: Dictionary = {}
 var last_spawn_id: String = "default"
 
@@ -89,6 +90,7 @@ func reset_state() -> void:
 	map_states.clear()
 	world_graph_data = {}
 	global_flags.clear()
+	building_states.clear()
 	player_position_by_map.clear()
 	last_spawn_id = "default"
 	current_day = 1

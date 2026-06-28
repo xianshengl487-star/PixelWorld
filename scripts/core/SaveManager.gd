@@ -80,6 +80,7 @@ func _collect_save_data() -> Dictionary:
 		"current_map_id": WorldState.current_map_id,
 		"visited_maps": WorldState.visited_maps,
 		"map_states": serializer.serialize_all_map_states(WorldState.map_states),
+		"building_states": WorldState.building_states,
 		"world_graph": WorldState.world_graph_data if not WorldState.world_graph_data.is_empty() else (WorldState.current_world_graph.to_save_data() if WorldState.current_world_graph != null and WorldState.current_world_graph.has_method("to_save_data") else {}),
 		"player_position_by_map": WorldState.player_position_by_map,
 		"last_spawn_id": WorldState.last_spawn_id
@@ -124,6 +125,8 @@ func _apply_save_data(data: Dictionary) -> void:
 	var visited_data = data.get("visited_maps", {})
 	WorldState.visited_maps = visited_data if visited_data is Dictionary else {}
 	WorldState.map_states = MapStateSerializerClass.new().deserialize_all_map_states(data.get("map_states", {}))
+	var building_data = data.get("building_states", {})
+	WorldState.building_states = building_data if building_data is Dictionary else {}
 	var graph_data = data.get("world_graph", {})
 	WorldState.world_graph_data = graph_data if graph_data is Dictionary else {}
 	if WorldState.world_graph_data.is_empty() and not WorldState.world_blueprint.is_empty() and WorldState.world_blueprint.has("maps"):

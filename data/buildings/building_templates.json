@@ -1,98 +1,132 @@
 {
 	"chief_house": {
 		"building_type": "chief_house",
-		"display_name": "村长家",
+		"display_name": "Chief House",
 		"world_types": ["xianxia", "wuxia", "magic", "apocalypse", "cyberpunk"],
 		"size": [7, 6],
 		"door_offset": [3, 5],
-		"services": ["quest"],
+		"services": ["dialogue_only", "quest_board"],
 		"interior_template": "simple_house",
 		"default_npcs": ["village_elder"],
 		"faction_role": "civilian",
-		"access_rules": {}
+		"access_rules": {},
+		"visual_hint": "wood_house"
 	},
 	"apothecary": {
 		"building_type": "apothecary",
-		"display_name": "药铺",
+		"display_name": "Apothecary",
 		"world_types": ["xianxia", "wuxia"],
 		"size": [6, 5],
 		"door_offset": [3, 4],
-		"services": ["healer", "item_shop"],
+		"services": ["healer", "shop"],
 		"interior_template": "shop",
 		"default_npcs": ["doctor"],
 		"faction_role": "civilian",
-		"access_rules": {}
+		"access_rules": {},
+		"visual_hint": "herb_shop"
 	},
 	"blacksmith": {
 		"building_type": "blacksmith",
-		"display_name": "铁匠铺",
+		"display_name": "Blacksmith",
 		"world_types": ["xianxia", "wuxia", "magic"],
 		"size": [6, 5],
 		"door_offset": [3, 4],
-		"services": ["weapon_shop"],
+		"services": ["blacksmith"],
 		"interior_template": "shop",
 		"default_npcs": ["blacksmith"],
 		"faction_role": "civilian",
-		"access_rules": {}
+		"access_rules": {},
+		"visual_hint": "forge"
 	},
 	"inn": {
 		"building_type": "inn",
-		"display_name": "客栈",
+		"display_name": "Inn",
 		"world_types": ["xianxia", "wuxia", "magic"],
 		"size": [8, 6],
 		"door_offset": [4, 5],
-		"services": ["inn", "food"],
+		"services": ["inn"],
 		"interior_template": "inn",
 		"default_npcs": ["innkeeper"],
 		"faction_role": "civilian",
-		"access_rules": {}
+		"access_rules": {},
+		"visual_hint": "inn"
 	},
 	"general_store": {
 		"building_type": "general_store",
-		"display_name": "杂货铺",
+		"display_name": "General Store",
 		"world_types": ["xianxia", "wuxia", "magic", "apocalypse", "cyberpunk"],
 		"size": [6, 5],
 		"door_offset": [3, 4],
-		"services": ["item_shop"],
+		"services": ["shop", "storage"],
 		"interior_template": "shop",
 		"default_npcs": ["merchant"],
 		"faction_role": "civilian",
-		"access_rules": {}
+		"access_rules": {},
+		"visual_hint": "store"
 	},
 	"sect_gate": {
 		"building_type": "sect_gate",
-		"display_name": "宗门山门",
+		"display_name": "Sect Gate",
 		"world_types": ["xianxia"],
 		"size": [12, 5],
 		"door_offset": [6, 4],
-		"services": ["faction_hall"],
+		"services": ["dialogue_only"],
 		"interior_template": "",
 		"default_npcs": ["sect_guard"],
 		"faction_role": "sect",
-		"access_rules": {"required_realm_order": 1}
+		"access_rules": {"required_realm_order": 1},
+		"visual_hint": "sect_gate"
 	},
 	"task_hall": {
 		"building_type": "task_hall",
-		"display_name": "任务堂",
+		"display_name": "Task Hall",
 		"world_types": ["xianxia"],
 		"size": [9, 6],
 		"door_offset": [4, 5],
-		"services": ["quest_board"],
+		"services": ["quest_board", "sect_task"],
 		"interior_template": "hall",
 		"default_npcs": ["task_elder"],
 		"faction_role": "sect",
-		"access_rules": {}
+		"access_rules": {},
+		"visual_hint": "hall"
 	},
 	"training_hall": {
 		"building_type": "training_hall",
-		"display_name": "演武场",
+		"display_name": "Training Hall",
 		"world_types": ["xianxia", "wuxia"],
 		"size": [10, 8],
 		"door_offset": [5, 7],
-		"services": ["training_hall"],
+		"services": ["training"],
 		"interior_template": "hall",
 		"default_npcs": ["trainer"],
 		"faction_role": "sect",
-		"access_rules": {}
+		"access_rules": {},
+		"visual_hint": "training"
+	},
+	"warehouse": {
+		"building_type": "warehouse",
+		"display_name": "Warehouse",
+		"world_types": ["xianxia", "wuxia", "magic", "apocalypse", "cyberpunk"],
+		"size": [7, 5],
+		"door_offset": [3, 4],
+		"services": ["storage"],
+		"interior_template": "storage",
+		"default_npcs": [],
+		"faction_role": "civilian",
+		"access_rules": {},
+		"visual_hint": "warehouse"
+	},
+	"player_home_placeholder": {
+		"building_type": "player_home_placeholder",
+		"display_name": "Player Home",
+		"world_types": ["xianxia", "wuxia", "magic", "apocalypse", "cyberpunk"],
+		"size": [6, 5],
+		"door_offset": [3, 4],
+		"services": ["storage", "inn"],
+		"interior_template": "simple_house",
+		"default_npcs": [],
+		"faction_role": "player",
+		"access_rules": {},
+		"visual_hint": "home"
 	}
 }

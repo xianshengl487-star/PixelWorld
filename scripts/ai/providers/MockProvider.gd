@@ -219,8 +219,61 @@ func _ensure_multimap_blueprint(blueprint: Dictionary) -> Dictionary:
 			{"connection_id": "forest_to_sect_gate", "from_map_id": "forest_001", "to_map_id": "sect_gate_001", "connection_type": "sect_gate", "from_spawn_id": "sect_road", "to_spawn_id": "from_forest", "required_realm_order": 0, "locked_message": "守门弟子拦住了你。"},
 			{"connection_id": "sect_gate_to_forest", "from_map_id": "sect_gate_001", "to_map_id": "forest_001", "connection_type": "sect_gate", "from_spawn_id": "from_forest", "to_spawn_id": "from_sect_gate"}
 		]
+	_ensure_building_interiors(blueprint)
 	if not blueprint.has("main_path"):
 		blueprint["main_path"] = ["village_001", "forest_001", "sect_gate_001"]
 	if not blueprint.has("side_paths"):
 		blueprint["side_paths"] = [["forest_001", "cave_001"]]
 	return blueprint
+
+
+func _ensure_building_interiors(blueprint: Dictionary) -> void:
+	var buildings = [
+		{"building_id": "chief_house_001", "building_type": "chief_house", "display_name": "Chief House"},
+		{"building_id": "apothecary_001", "building_type": "apothecary", "display_name": "Apothecary"},
+		{"building_id": "blacksmith_001", "building_type": "blacksmith", "display_name": "Blacksmith"},
+		{"building_id": "inn_001", "building_type": "inn", "display_name": "Inn"},
+		{"building_id": "general_store_001", "building_type": "general_store", "display_name": "General Store"}
+	]
+	var existing_maps: Dictionary = {}
+	for map_data in blueprint.get("maps", []):
+		existing_maps[str(map_data.get("map_id", ""))] = true
+	var existing_connections: Dictionary = {}
+	for connection in blueprint.get("connections", []):
+		existing_connections[str(connection.get("connection_id", ""))] = true
+	for building in buildings:
+		var building_id = str(building.get("building_id", ""))
+		var interior_id = "%s_interior" % building_id
+		var door_spawn = "%s_door" % building_id
+		if not existing_maps.has(interior_id):
+			blueprint["maps"].append({
+				"map_id": interior_id,
+				"display_name": "%s Interior" % str(building.get("display_name", building_id)),
+				"map_type": "interior",
+				"size": [32, 32],
+				"danger_level": 0,
+				"parent_map_id": "village_001",
+				"parent_building_id": building_id,
+				"parent_spawn_id": door_spawn,
+				"building_type": str(building.get("building_type", ""))
+			})
+		var enter_id = "village_to_%s" % interior_id
+		if not existing_connections.has(enter_id):
+			blueprint["connections"].append({
+				"connection_id": enter_id,
+				"from_map_id": "village_001",
+				"to_map_id": interior_id,
+				"connection_type": "building_door",
+				"from_spawn_id": door_spawn,
+				"to_spawn_id": "default"
+			})
+		var exit_id = "%s_to_village" % interior_id
+		if not existing_connections.has(exit_id):
+			blueprint["connections"].append({
+				"connection_id": exit_id,
+				"from_map_id": interior_id,
+				"to_map_id": "village_001",
+				"connection_type": "door_exit",
+				"from_spawn_id": "exit",
+				"to_spawn_id": door_spawn
+			})

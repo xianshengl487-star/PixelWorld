@@ -26,6 +26,10 @@ var size: Vector2i = Vector2i(64, 64)
 var seed: int = 0
 var danger_level: int = 0
 var biome: String = ""
+var parent_map_id: String = ""
+var parent_building_id: String = ""
+var parent_spawn_id: String = ""
+var metadata: Dictionary = {}
 
 var tiles: Array = []
 var walkable: Array = []
@@ -49,6 +53,10 @@ func setup(data: Dictionary) -> void:
 	seed = int(data.get("seed", seed))
 	danger_level = int(data.get("danger_level", danger_level))
 	biome = str(data.get("biome", biome))
+	parent_map_id = str(data.get("parent_map_id", parent_map_id))
+	parent_building_id = str(data.get("parent_building_id", parent_building_id))
+	parent_spawn_id = str(data.get("parent_spawn_id", parent_spawn_id))
+	metadata = data.get("metadata", metadata).duplicate(true)
 	size = _parse_size(data.get("size", size), map_type)
 	tiles = data.get("tiles", tiles).duplicate(true)
 	walkable = data.get("walkable", walkable).duplicate(true)
@@ -122,6 +130,10 @@ func to_save_data() -> Dictionary:
 		"seed": seed,
 		"danger_level": danger_level,
 		"biome": biome,
+		"parent_map_id": parent_map_id,
+		"parent_building_id": parent_building_id,
+		"parent_spawn_id": parent_spawn_id,
+		"metadata": metadata,
 		"tiles": tiles,
 		"walkable": walkable,
 		"locked_path_tiles": locked_path_tiles,

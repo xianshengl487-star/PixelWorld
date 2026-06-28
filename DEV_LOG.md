@@ -4,6 +4,51 @@
 
 ---
 
+## 2026-06-28 - v0.4.1 Building interiors, runtime transitions, and save-state strengthening
+
+### Update Type
+
+Gameplay map architecture / building interiors / runtime map switching / save compatibility / HUD and logs / tests / documentation
+
+### What Changed
+
+* Added `BuildingRegistry.gd` to load `data/buildings/building_templates.json` and create stable building instances with doors, services, access rules, and `interior_map_id`.
+* Added `BuildingService.gd` for deterministic local building services, including healer, inn, shop placeholder, blacksmith placeholder, quest board, training, storage, and dialogue-only behavior.
+* Added `InteriorMapGenerator.gd` to create MVP interior maps for chief house, apothecary, blacksmith, inn, general store, and generic fallback interiors.
+* Added `DoorInteraction.gd` as an Area2D building-door trigger for future scene usage.
+* Expanded `building_templates.json` to include chief house, apothecary, blacksmith, inn, general store, sect gate, task hall, training hall, warehouse, and player home placeholder.
+* Reworked `MapInstanceGenerator.gd` so the default village places road-connected buildings with stable ids, door positions, services, and interior map ids.
+* Expanded `MockProvider.gd` so default WorldGraph blueprints include building interior map nodes and village <-> interior connections.
+* Strengthened `MapInstance.gd` with parent map/building/spawn metadata for interior maps.
+* Reworked `GameWorld.gd` runtime map handling: layer creation, single-player preservation, transition areas, building rendering, map switching, building entry/return logs, HUD updates, player placement, and map-state save/restore.
+* Strengthened `MapState.gd`, `WorldState.gd`, and `SaveManager.gd` with `building_states`, dynamic map-state fields, old-save compatibility, current map id, visited maps, world graph data, last spawn id, and per-map player positions.
+* Expanded `GameHUD.gd` and `GameHUD.tscn` with map info, building info, and transition message display methods/nodes.
+* Fixed the retained T025 CLI player-node regression by validating the player before freeing the GameWorld instance.
+* Expanded `SmokeTestRunner.gd` with T156-T210 for building registry/templates, services, interiors, village buildings, WorldGraph interior connections, GameWorld switching, save state, HUD/logs, T025 rerun, and documentation checks.
+* Updated `README.md`, `GAMEPLAY_MAP_ARCHITECTURE.md`, `TEST_REPORT.md`, `DEV_LOG.md`, project version, and main menu version label to v0.4.1.
+
+### Reason
+
+v0.4.0 established that one world can contain multiple maps. v0.4.1 makes buildings part of that map graph: village doors now point to real interior maps, interiors can return to the outdoor village, and map/save state knows about building visits. This keeps the project data-driven and testable while avoiding real AI providers, TileMapLayer migration, seamless maps, multiplayer, or third-party art.
+
+### Validation
+
+* Godot 4.7 CLI compile validation: PASS
+* JSON configuration parse validation: PASS
+* SmokeTestRunner: 192/192 PASS
+* T156-T210: 55/55 PASS
+* T025: PASS in this CLI run
+* T028: PASS in this CLI run
+* Godot editor F5 manual validation: not executed; M015-M030 remain marked as 未测 in `TEST_REPORT.md`
+
+### Follow-Up
+
+* Run Godot editor F5 manual checks for village door interaction, HUD readability, collision feel, save/load UX, and repeated village/interior switching.
+* Replace more ColorRect MVP markers with generated pixel assets or a future TileSet/TileMapLayer path after runtime behavior remains stable.
+* Add richer interaction prompts and unlock rules for building services and future faction/realm gates.
+
+---
+
 ## 2026-06-28 01:56 — v0.4.0 多地图世界架构深化
 
 ### 更新类型

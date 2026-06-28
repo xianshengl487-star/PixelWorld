@@ -20,6 +20,9 @@ class_name GameHUD
 @onready var _status_label: Label = $StatusLabel
 @onready var _inventory_label: Label = $InventoryLabel
 @onready var _progression_label: Label = $ProgressionLabel
+@onready var _map_info_label: Label = get_node_or_null("MapInfoLabel")
+@onready var _building_info_label: Label = get_node_or_null("BuildingInfoLabel")
+@onready var _transition_message_label: Label = get_node_or_null("TransitionMessageLabel")
 
 var _ai_client = null
 var _player = null
@@ -131,6 +134,26 @@ func update_progression_display(summary: Dictionary) -> void:
 	if modifiers is Dictionary and modifiers.size() > 0:
 		text += " | 世界影响: %d项" % modifiers.size()
 	_progression_label.text = text
+
+
+func update_map_info(map_id: String, display_name: String, map_type: String) -> void:
+	var text = "Map: %s (%s)" % [display_name if display_name != "" else map_id, map_type]
+	if _map_info_label != null:
+		_map_info_label.text = text
+	elif _region_label != null:
+		_region_label.text = text
+
+
+func show_transition_message(text: String) -> void:
+	if _transition_message_label != null:
+		_transition_message_label.text = text
+	_set_action_result(text)
+
+
+func update_building_info(building_name: String = "") -> void:
+	var text = "Building: %s" % building_name if building_name != "" else ""
+	if _building_info_label != null:
+		_building_info_label.text = text
 
 
 func show_breakthrough_result(result: Dictionary) -> void:

@@ -1,5 +1,5 @@
 extends SceneTree
-## SmokeTestRunner.gd — CLI 自动化冒烟测试  v0.4.0
+## SmokeTestRunner.gd — CLI 自动化冒烟测试  v0.4.1
 ## 运行: godot --headless --path . --script res://scripts/tests/SmokeTestRunner.gd
 
 const AIClientClass = preload("res://scripts/ai/AIClient.gd")
@@ -28,6 +28,11 @@ const MapConnectionValidatorClass = preload("res://scripts/map/MapConnectionVali
 const BuildingTemplateClass = preload("res://scripts/buildings/BuildingTemplate.gd")
 const BuildingInstanceClass = preload("res://scripts/buildings/BuildingInstance.gd")
 const BuildingPlacementValidatorClass = preload("res://scripts/buildings/BuildingPlacementValidator.gd")
+const BuildingRegistryClass = preload("res://scripts/buildings/BuildingRegistry.gd")
+const BuildingServiceClass = preload("res://scripts/buildings/BuildingService.gd")
+const InteriorMapGeneratorClass = preload("res://scripts/buildings/InteriorMapGenerator.gd")
+const DoorInteractionClass = preload("res://scripts/buildings/DoorInteraction.gd")
+const TransitionAreaClass = preload("res://scripts/map/TransitionArea.gd")
 const TEST_SEED: int = 42
 
 var _results: Array = []
@@ -43,7 +48,7 @@ var _save_manager = null
 
 func _init() -> void:
 	print("=".repeat(60))
-	print("  PixelWorld CLI Smoke Test Runner  v0.4.0  (seed=%d)" % TEST_SEED)
+	print("  PixelWorld CLI Smoke Test Runner  v0.4.1  (seed=%d)" % TEST_SEED)
 	print("=".repeat(60))
 	
 	await process_frame; await process_frame
@@ -150,6 +155,15 @@ func _run_all_tests() -> void:
 	await _t139(); await _t140(); await _t141(); await _t142(); await _t143()
 	_t144(); _t145(); _t146(); _t147(); _t148(); _t149()
 	_t150(); _t151(); await _t152(); await _t153(); _t154(); _t155()
+	_t156(); _t157(); _t158(); _t159(); _t160(); _t161(); await _t162()
+	_t163(); _t164(); _t165(); _t166(); _t167(); _t168(); _t169(); _t170()
+	_t171(); _t172(); _t173(); _t174(); _t175(); await _t176(); await _t177()
+	await _t178(); await _t179(); await _t180(); await _t181(); await _t182()
+	await _t183(); await _t184(); _t185(); _t186(); await _t187(); _t188()
+	_t189(); _t190(); _t191(); _t192(); await _t193(); await _t194()
+	await _t195(); _t196(); _t197(); await _t198(); await _t199(); _t200()
+	await _t201(); await _t202(); await _t203(); await _t204(); await _t205()
+	await _t206(); await _t207(); _t208(); _t209(); _t210()
 
 func _t001(): _record("T001", "project.godot 存在", FileAccess.file_exists("res://project.godot"))
 func _t002(): _record("T002", "MainMenu.tscn 可加载", _scene_loadable("res://scenes/MainMenu.tscn"))
@@ -293,6 +307,7 @@ func _t025() -> void:
 	await _wait_frame(); await _wait_frame()
 	await _wait_frame(); await _wait_frame()
 	var p = gw.get_player_node() if gw.has_method("get_player_node") else null
+	var ok = p != null
 	if p == null:
 		var children = []
 		for c in gw.get_children():
@@ -300,6 +315,10 @@ func _t025() -> void:
 		print("  [T025 DIAG] children: " + ", ".join(children))
 		var initialized = gw.is_initialized() if gw.has_method("is_initialized") else false
 		print("  [T025 DIAG] is_initialized=%s" % str(initialized))
+	if ok:
+		gw.queue_free(); await _wait_frame()
+		_record("T025", "GameWorld player node exists after init", true)
+		return
 	gw.queue_free(); await _wait_frame()
 	_record("T025", "GameWorld 初始化后玩家节点存在", p != null)
 
@@ -1163,6 +1182,528 @@ func _t154() -> void:
 func _t155() -> void:
 	var text = _read_text("res://README.md")
 	_record("T155", "README 更新 v0.4.0 地图架构说明", "v0.4.0" in text and "WorldGraph" in text and "MapInstance" in text)
+
+
+func _t156() -> void:
+	var templates = BuildingRegistryClass.new().load_templates()
+	_record("T156", "BuildingRegistry loads templates", templates.size() >= 10)
+
+
+func _t157() -> void:
+	var template = BuildingRegistryClass.new().get_template("chief_house")
+	_record("T157", "chief_house template has required keys", _building_template_has_required_keys(template))
+
+
+func _t158() -> void:
+	var template = BuildingRegistryClass.new().get_template("apothecary")
+	_record("T158", "apothecary template has healer service", _building_template_has_required_keys(template) and "healer" in template.get("services", []))
+
+
+func _t159() -> void:
+	var template = BuildingRegistryClass.new().get_template("blacksmith")
+	_record("T159", "blacksmith template has service", _building_template_has_required_keys(template) and "blacksmith" in template.get("services", []))
+
+
+func _t160() -> void:
+	var template = BuildingRegistryClass.new().get_template("inn")
+	_record("T160", "inn template has inn service", _building_template_has_required_keys(template) and "inn" in template.get("services", []))
+
+
+func _t161() -> void:
+	var service = BuildingServiceClass.new()
+	service.setup({"service_id": "healer_001", "service_type": "healer", "display_name": "Healer"})
+	_record("T161", "BuildingService healer can be created", service.service_type == "healer" and service.can_use(_world_state).get("ok", false))
+
+
+func _t162() -> void:
+	var scene = load("res://scenes/Player.tscn")
+	var player = scene.instantiate() if scene != null else null
+	if player == null:
+		_record("T162", "BuildingService healer restores player health", false, "Player scene missing")
+		return
+	root.add_child(player)
+	await _wait_frame()
+	var stats = player.get_stats() if player.has_method("get_stats") else null
+	if stats != null:
+		stats.take_damage(9)
+	_world_state.player_health = 3
+	var service = BuildingServiceClass.new()
+	service.setup({"service_id": "healer_001", "service_type": "healer"})
+	var result = service.use_service(player, _world_state)
+	var ok = result.get("ok", false) and _world_state.player_health == _world_state.player_max_health
+	if stats != null:
+		ok = ok and stats.health == stats.max_health
+	player.queue_free()
+	await _wait_frame()
+	_record("T162", "BuildingService healer restores player health", ok)
+
+
+func _t163() -> void:
+	var building = BuildingRegistryClass.new().create_building_instance("chief_house", Vector2i(20, 20), "village_001")
+	var map = InteriorMapGeneratorClass.new().generate_chief_house(building, {"world_type": "xianxia"})
+	_record("T163", "InteriorMapGenerator creates chief_house interior", map != null and map.map_type == "interior" and map.parent_building_id == "chief_house_001")
+
+
+func _t164() -> void:
+	var building = BuildingRegistryClass.new().create_building_instance("apothecary", Vector2i(20, 20), "village_001")
+	var map = InteriorMapGeneratorClass.new().generate_apothecary(building, {"world_type": "xianxia"})
+	_record("T164", "InteriorMapGenerator creates apothecary interior id", map != null and map.map_id == "apothecary_001_interior")
+
+
+func _t165() -> void:
+	var map = _sample_interior_map()
+	_record("T165", "Generated interior map_type is interior", map != null and map.map_type == "interior")
+
+
+func _t166() -> void:
+	var map = _sample_interior_map()
+	_record("T166", "Interior map has default spawn", map != null and map.spawn_points.has("default"))
+
+
+func _t167() -> void:
+	var map = _sample_interior_map()
+	var ok = false
+	if map != null:
+		for transition in map.transitions:
+			if str(transition.get("to_map_id", "")) == "village_001" and str(transition.get("target_spawn_id", "")) == "apothecary_001_door":
+				ok = true
+				break
+	_record("T167", "Interior map has exit transition back to village", ok)
+
+
+func _t168() -> void:
+	var door = DoorInteractionClass.new()
+	door.setup({"building_id": "apothecary_001", "interior_map_id": "apothecary_001_interior", "target_spawn_id": "default", "from_rect": {"x": 1, "y": 2, "w": 1, "h": 1}}, 32)
+	var ok = door.building_id == "apothecary_001" and door.target_map_id == "apothecary_001_interior" and door.get_child_count() > 0
+	door.queue_free()
+	_record("T168", "DoorInteraction sets target interior", ok)
+
+
+func _t169() -> void:
+	var map = _generated_village()
+	_record("T169", "Village generator places buildings", map != null and map.buildings.size() >= 5)
+
+
+func _t170() -> void:
+	var map = _generated_village()
+	_record("T170", "Village has chief_house", not _find_building(map, "chief_house").is_empty())
+
+
+func _t171() -> void:
+	var map = _generated_village()
+	_record("T171", "Village has apothecary", not _find_building(map, "apothecary").is_empty())
+
+
+func _t172() -> void:
+	var map = _generated_village()
+	var ok = map != null and map.buildings.size() > 0
+	if ok:
+		for building in map.buildings:
+			if not building.has("door_position"):
+				ok = false
+				break
+	_record("T172", "Every village building has door_position", ok)
+
+
+func _t173() -> void:
+	var map = _generated_village()
+	var ok = map != null and map.buildings.size() > 0
+	if ok:
+		for building in map.buildings:
+			if str(building.get("interior_map_id", "")) == "":
+				ok = false
+				break
+	_record("T173", "Every village building has interior_map_id", ok)
+
+
+func _t174() -> void:
+	var map = _generated_village()
+	var building = _find_building(map, "chief_house")
+	var result = BuildingPlacementValidatorClass.new().validate_placement(map, building)
+	_record("T174", "BuildingPlacementValidator detects overlap", not result.get("ok", true))
+
+
+func _t175() -> void:
+	var map = _generated_village()
+	var building = _find_building(map, "apothecary")
+	var original = map.buildings.duplicate(true)
+	map.buildings.clear()
+	var result = BuildingPlacementValidatorClass.new().validate_placement(map, building)
+	map.buildings = original
+	_record("T175", "BuildingPlacementValidator accepts walkable door", result.get("ok", false))
+
+
+func _t176() -> void:
+	var bp = await _get_mock_blueprint()
+	var found = false
+	for map_data in bp.get("maps", []):
+		if str(map_data.get("map_id", "")).ends_with("_interior"):
+			found = true
+			break
+	_record("T176", "World blueprint includes interior maps", found)
+
+
+func _t177() -> void:
+	var bp = await _get_mock_blueprint()
+	_record("T177", "WorldGraph connects village to apothecary interior", _has_connection(bp, "village_001", "apothecary_001_interior"))
+
+
+func _t178() -> void:
+	var bp = await _get_mock_blueprint()
+	_record("T178", "WorldGraph connects apothecary interior to village", _has_connection(bp, "apothecary_001_interior", "village_001"))
+
+
+func _t179() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = gw != null and gw.get_current_map_id() == "village_001"
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T179", "GameWorld loads village map", ok)
+
+
+func _t180() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = gw != null and gw.switch_map("apothecary_001_interior", "default")
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T180", "GameWorld switches village to apothecary interior", ok)
+
+
+func _t181() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		gw.switch_map("apothecary_001_interior", "default")
+		ok = gw.get_current_map_id() == "apothecary_001_interior"
+		gw.queue_free()
+		await _wait_frame()
+	_record("T181", "GameWorld current_map_id updates to interior", ok)
+
+
+func _t182() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		gw.switch_map("apothecary_001_interior", "default")
+		var spawn = gw.current_map_instance.get_spawn_point("default")
+		ok = Vector2i(int(_world_state.player_position.x), int(_world_state.player_position.y)) == spawn
+		gw.queue_free()
+		await _wait_frame()
+	_record("T182", "Player placed at interior default spawn", ok)
+
+
+func _t183() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		gw.switch_map("apothecary_001_interior", "default")
+		ok = gw.switch_map("village_001", "apothecary_001_door")
+		gw.queue_free()
+		await _wait_frame()
+	_record("T183", "GameWorld returns interior to village door", ok)
+
+
+func _t184() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		gw.switch_map("apothecary_001_interior", "default")
+		gw.switch_map("village_001", "apothecary_001_door")
+		ok = gw.get_current_map_id() == "village_001"
+		gw.queue_free()
+		await _wait_frame()
+	_record("T184", "GameWorld current_map_id returns to village", ok)
+
+
+func _t185() -> void:
+	var state = MapStateClass.new()
+	state.setup({"map_id": "village_001"})
+	state.set_building_state("apothecary_001", {"visited": true})
+	_record("T185", "MapState saves building_states", state.to_save_data().get("building_states", {}).has("apothecary_001"))
+
+
+func _t186() -> void:
+	var state = MapStateClass.new()
+	state.setup({"map_id": "village_001", "last_player_position": {"x": 3, "y": 4}})
+	_record("T186", "MapState restores last_player_position", state.last_player_position == Vector2i(3, 4))
+
+
+func _t187() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		gw.save_current_map_state()
+		ok = _world_state.get_map_state("village_001").get("building_states", {}).size() > 0
+		gw.queue_free()
+		await _wait_frame()
+	_record("T187", "GameWorld save_current_map_state writes building state", ok)
+
+
+func _t188() -> void:
+	if _save_manager == null:
+		_record("T188", "SaveManager saves building_states", false, "SaveManager missing")
+		return
+	_world_state.building_states = {"apothecary_001": {"visited": true}}
+	var ok = _save_manager.save_game("smoke_buildings") and _save_manager.has_save("smoke_buildings")
+	_record("T188", "SaveManager saves building_states", ok)
+
+
+func _t189() -> void:
+	if _save_manager == null:
+		_record("T189", "SaveManager loads building_states", false, "SaveManager missing")
+		return
+	_world_state.building_states.clear()
+	var result = _save_manager.load_game("smoke_buildings")
+	var ok = result.get("ok", false) and _world_state.building_states.has("apothecary_001")
+	_save_manager.delete_save("smoke_buildings")
+	_record("T189", "SaveManager loads building_states", ok)
+
+
+func _t190() -> void:
+	if _save_manager == null:
+		_record("T190", "SaveManager accepts old save missing map fields", false, "SaveManager missing")
+		return
+	_save_manager._apply_save_data({"world_name": "Old", "world_type": "xianxia", "current_map_id": "village_001"})
+	var ok = _world_state.map_states is Dictionary and _world_state.current_map_id == "village_001"
+	_record("T190", "SaveManager accepts old save missing map fields", ok)
+
+
+func _t191() -> void:
+	var hud_scene = load("res://scenes/ui/GameHUD.tscn")
+	var hud = hud_scene.instantiate() if hud_scene != null else null
+	var ok = hud != null and hud.has_method("update_map_info")
+	if hud != null:
+		hud.queue_free()
+	_record("T191", "GameHUD has update_map_info", ok)
+
+
+func _t192() -> void:
+	var hud_scene = load("res://scenes/ui/GameHUD.tscn")
+	var hud = hud_scene.instantiate() if hud_scene != null else null
+	var ok = hud != null and hud.has_method("show_transition_message") and hud.has_method("update_building_info")
+	if hud != null:
+		hud.queue_free()
+	_record("T192", "GameHUD has transition and building methods", ok)
+
+
+func _t193() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = gw != null and gw.get_node_or_null("TransitionLayer") != null and gw.get_node_or_null("BuildingLayer") != null
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T193", "GameWorld runtime layers exist", ok)
+
+
+func _t194() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = gw != null and gw.get_transition_count() > 0
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T194", "GameWorld creates transition areas", ok)
+
+
+func _t195() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		var layer = gw.get_node_or_null("BuildingLayer")
+		ok = layer != null and layer.get_child_count() > 0
+		gw.queue_free()
+		await _wait_frame()
+	_record("T195", "Loaded village renders building layer", ok)
+
+
+func _t196() -> void:
+	var map = _sample_interior_map()
+	_record("T196", "Interior map has tiles and service POI", map != null and map.tiles.size() > 0 and map.pois.size() > 0)
+
+
+func _t197() -> void:
+	var area = TransitionAreaClass.new()
+	area.setup({"transition_id": "test_transition", "to_map_id": "forest_001", "target_spawn_id": "default", "from_rect": {"x": 1, "y": 2, "w": 2, "h": 2}}, 32)
+	var ok = area.transition_id == "test_transition" and area.target_map_id == "forest_001" and area.get_child_count() > 0
+	area.queue_free()
+	_record("T197", "TransitionArea can be created from data", ok)
+
+
+func _t198() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		ok = not gw.request_map_transition("missing_transition")
+		gw.queue_free()
+		await _wait_frame()
+	_record("T198", "request_map_transition rejects missing id", ok)
+
+
+func _t199() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		ok = gw.request_map_transition("village_to_apothecary_001_interior") and gw.get_current_map_id() == "apothecary_001_interior"
+		gw.queue_free()
+		await _wait_frame()
+	_record("T199", "request_map_transition switches to building interior", ok)
+
+
+func _t200() -> void:
+	var transition = MapTransitionClass.new()
+	transition.setup({"transition_id": "locked_door", "from_map_id": "village_001", "to_map_id": "secret_room", "enabled": false, "locked_message": "locked for smoke"})
+	var result = transition.can_use(_world_state)
+	_record("T200", "Disabled MapTransition returns locked message", not result.get("ok", true) and result.get("reason", "") == "locked for smoke")
+
+
+func _t201() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	if _game_log != null:
+		_game_log.clear()
+	var ok = false
+	if gw != null:
+		gw.switch_map("apothecary_001_interior", "default")
+		ok = _log_contains("Entered building")
+		gw.queue_free()
+		await _wait_frame()
+	_record("T201", "GameLog records building entry", ok)
+
+
+func _t202() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	if _game_log != null:
+		_game_log.clear()
+	var ok = false
+	if gw != null:
+		gw.switch_map("apothecary_001_interior", "default")
+		gw.switch_map("village_001", "apothecary_001_door")
+		ok = _log_contains("returned to")
+		gw.queue_free()
+		await _wait_frame()
+	_record("T202", "GameLog records building return", ok)
+
+
+func _t203() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = gw != null and gw.get_player_node() != null
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T203", "T025 rerun player node exists after map init", ok)
+
+
+func _t204() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		gw.switch_map("forest_001", "from_village")
+		ok = gw.get_player_node() != null
+		gw.queue_free()
+		await _wait_frame()
+	_record("T204", "Player node exists after map switch", ok)
+
+
+func _t205() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		gw.switch_map("forest_001", "from_village")
+		gw.switch_map("village_001", "east_gate")
+		ok = _count_named_nodes(gw, "Player") == 1
+		gw.queue_free()
+		await _wait_frame()
+	_record("T205", "Map switching does not duplicate Player", ok)
+
+
+func _t206() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		gw.switch_map("apothecary_001_interior", "default")
+		ok = _world_state.visited_maps.has("apothecary_001_interior")
+		gw.queue_free()
+		await _wait_frame()
+	_record("T206", "visited_maps records building interior", ok)
+
+
+func _t207() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		gw.switch_map("apothecary_001_interior", "default")
+		gw.switch_map("village_001", "apothecary_001_door")
+		gw.save_current_map_state()
+		ok = _world_state.map_states.size() >= 2
+		gw.queue_free()
+		await _wait_frame()
+	_record("T207", "map_states preserves village and interior states", ok)
+
+
+func _t208() -> void:
+	var text = _read_text("res://README.md")
+	_record("T208", "README documents v0.4.1", "v0.4.1" in text)
+
+
+func _t209() -> void:
+	var text = _read_text("res://GAMEPLAY_MAP_ARCHITECTURE.md")
+	_record("T209", "Architecture doc documents Building Interior v0.4.1", "v0.4.1" in text and "Building Interior" in text)
+
+
+func _t210() -> void:
+	var text = _read_text("res://TEST_REPORT.md")
+	_record("T210", "TEST_REPORT documents T156-T210", "T156-T210" in text)
+
+
+func _sample_interior_map():
+	var building = BuildingRegistryClass.new().create_building_instance("apothecary", Vector2i(20, 20), "village_001")
+	return InteriorMapGeneratorClass.new().generate_interior_for_building(building, {"world_type": "xianxia"})
+
+
+func _generated_village():
+	return MapInstanceGeneratorClass.new().generate_map_instance({"map_id": "village_001", "map_type": "village", "display_name": "Smoke Village"}, {"seed": TEST_SEED, "world_type": "xianxia"})
+
+
+func _find_building(map, building_type: String) -> Dictionary:
+	if map == null:
+		return {}
+	for building in map.buildings:
+		if str(building.get("building_type", "")) == building_type:
+			return building
+	return {}
+
+
+func _building_template_has_required_keys(template: Dictionary) -> bool:
+	var keys = ["building_type", "display_name", "world_types", "size", "door_offset", "services", "interior_template", "default_npcs", "access_rules", "visual_hint"]
+	for key in keys:
+		if not template.has(key):
+			return false
+	return true
+
+
+func _has_connection(bp: Dictionary, from_id: String, to_id: String) -> bool:
+	for connection in bp.get("connections", []):
+		if str(connection.get("from_map_id", "")) == from_id and str(connection.get("to_map_id", "")) == to_id:
+			return true
+	return false
+
+
+func _log_contains(fragment: String) -> bool:
+	if _game_log == null:
+		return false
+	for entry in _game_log.get_recent(25):
+		if fragment in str(entry.get("text", "")):
+			return true
+	return false
+
+
+func _count_named_nodes(node: Node, target_name: String) -> int:
+	if node == null:
+		return 0
+	var count = 1 if node.name == target_name else 0
+	for child in node.get_children():
+		count += _count_named_nodes(child, target_name)
+	return count
 
 
 func _all_files_exist(paths: Array) -> bool:
