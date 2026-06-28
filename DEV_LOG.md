@@ -4,6 +4,47 @@
 
 ---
 
+## 2026-06-28 - v0.4.3 Map transition performance, prompts, and readability
+
+### Update Type
+
+Map transition performance / interaction prompts / operation feel / scene readability / UX docs / tests
+
+### What Changed
+
+* Added `ChunkedMapRenderer.gd` to row-merge same-type tile runs and reduce the ColorRect node count without deleting the existing ColorRect fallback path.
+* Added `OptimizedCollisionBuilder.gd` to row-merge blocking tiles into fewer `StaticBody2D` collision runs.
+* Added `MapRuntimeCache.gd` and `GameWorld.get_performance_summary()` for generated-map reuse and load/switch/render/collision/spawn/unload timing metrics.
+* Added `LoadingOverlay`, `InteractionPrompt`, `ControlHintPanel`, `FloatingLabel`, `SceneDecorator`, `InteractionTargetTracker`, `ServiceMenu`, and `QuestPanel` scripts/scenes for player-facing UX guidance.
+* Reworked `GameWorld.gd` with `switch_map_async()`, transition cooldown for player-triggered routes, input locking during async travel, loading overlay hooks, performance counters, decoration pass, and interaction-target registration.
+* Reworked `Player.gd` movement toward acceleration/friction-based velocity and added input lock helpers for map switching.
+* Added prompt helpers to `TransitionArea.gd`, `DoorInteraction.gd`, `Interactable.gd`, and `NPC.gd`.
+* Added InputMap actions for quest, inventory, debug, save, load, and help toggles.
+* Updated project version, save version, main menu version label, README, TEST_REPORT, and added `UX_PERFORMANCE_REPORT.md` and `GAMEPLAY_UX_GUIDE.md`.
+* Expanded `SmokeTestRunner.gd` with T271-T330 covering renderer merging, collision merging, cache, loading overlay, interaction prompt, control hints, scene decoration, async map switching, docs, and input actions.
+
+### Reason
+
+v0.4.2 made map state, services, quests, and save migration safer. v0.4.3 addresses the next visible problem: map changes could feel heavy because the MVP renderer and collision builder created too many nodes at once, and players lacked consistent guidance for doors, exits, resources, services, and quest text. This is the map transition performance pass for the v0.4 line.
+
+### Validation
+
+* Godot 4.7 CLI compile validation: PASS.
+* UTF-8 JSON configuration parse validation: PASS.
+* SmokeTestRunner final run: 312/312 PASS for the 312 defined tests across T001-T330. T063-T080 remain intentionally undefined.
+* v0.4.3 range T271-T330: 60/60 PASS.
+* Editor GUI attempt: process id `377436` stayed alive after the short launch check, then was closed by Codex; visual confirmation was not performed.
+* Runtime GUI attempt: process id `391588` stayed alive after the short launch check, then was closed by Codex; visual confirmation was not performed.
+* Manual F5 checks M051-M080: untested until a human visually confirms editor/runtime feel.
+
+### Follow-Up
+
+* Run human F5 validation for M051-M080 before calling movement feel, stutter, prompt placement, or visual readability complete.
+* Consider a future TileMapLayer/TileSet migration only after the ColorRect fallback remains stable and measurable.
+* Add richer authored service panels after the text-first `ServiceMenu` and `QuestPanel` paths are stable.
+
+---
+
 ## 2026-06-28 - v0.4.2 Code health, state isolation, services, and quests
 
 ### Update Type

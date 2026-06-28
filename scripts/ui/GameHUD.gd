@@ -3,6 +3,10 @@ class_name GameHUD
 ## GameHUD.gd — 游戏 HUD
 ## 显示世界信息、日志、自由行动输入框
 
+const LoadingOverlayScene = preload("res://scenes/ui/LoadingOverlay.tscn")
+const InteractionPromptScene = preload("res://scenes/ui/InteractionPrompt.tscn")
+const ControlHintPanelScene = preload("res://scenes/ui/ControlHintPanel.tscn")
+
 @onready var _world_name_label: Label = $TopBar/WorldNameLabel
 @onready var _region_label: Label = $TopBar/RegionLabel
 @onready var _reputation_label: Label = $TopBar/ReputationLabel
@@ -28,9 +32,13 @@ class_name GameHUD
 
 var _ai_client = null
 var _player = null
+var _loading_overlay = null
+var _interaction_prompt = null
+var _control_hint_panel = null
 
 
 func _ready() -> void:
+	_ensure_ux_nodes()
 	_update_hud()
 	
 	# 连接自由行动输入信号
@@ -54,6 +62,11 @@ func _ready() -> void:
 		_update_hud()
 	)
 	add_child(timer)
+
+
+func _process(_delta: float) -> void:
+	if InputMap.has_action("help_toggle") and Input.is_action_just_pressed("help_toggle"):
+		toggle_control_hints()
 
 
 func setup(ai_client, player = null) -> void:
@@ -152,6 +165,10 @@ func show_transition_message(text: String) -> void:
 	_set_action_result(text)
 
 
+func show_toast(text: String) -> void:
+	show_transition_message(text)
+
+
 func update_building_info(building_name: String = "") -> void:
 	var text = "Building: %s" % building_name if building_name != "" else ""
 	if _building_info_label != null:
@@ -173,7 +190,18 @@ func show_debug_info(summary: Dictionary) -> void:
 	if _debug_info_label == null:
 		return
 	var tile = summary.get("player_tile", {})
-	_debug_info_label.text = "Debug map=%s type=%s pos=(%s,%s) transitions=%s buildings=%s enemies=%s interactables=%s quests=%s" % [
+	var perf = summary.get("performance", {})
+	var perf_text = ""
+	if perf is Dictionary and not perf.is_empty():
+		perf_text = " load=%.1fms render=%.1fms collision=%.1fms spawn=%.1fms nodes=%s decor=%s" % [
+			float(perf.get("last_map_load_ms", 0.0)),
+			float(perf.get("last_render_ms", 0.0)),
+			float(perf.get("last_collision_ms", 0.0)),
+			float(perf.get("last_spawn_ms", 0.0)),
+			str(perf.get("last_map_node_count", 0)),
+			str(perf.get("decoration_count", 0))
+		]
+	_debug_info_label.text = "Debug map=%s type=%s pos=(%s,%s) transitions=%s buildings=%s enemies=%s interactables=%s quests=%s%s" % [
 		summary.get("current_map_id", ""),
 		summary.get("current_map_type", ""),
 		str(tile.get("x", 0)) if tile is Dictionary else "0",
@@ -182,8 +210,57 @@ func show_debug_info(summary: Dictionary) -> void:
 		str(summary.get("building_count", 0)),
 		str(summary.get("enemy_count", 0)),
 		str(summary.get("interactable_count", 0)),
-		str(summary.get("active_quest_count", 0))
+		str(summary.get("active_quest_count", 0)),
+		perf_text
 	]
+
+
+func show_loading(target_name: String = "") -> void:
+	_ensure_ux_nodes()
+	if _loading_overlay != null and _loading_overlay.has_method("show_loading"):
+		_loading_overlay.show_loading(target_name)
+
+
+func hide_loading() -> void:
+	_ensure_ux_nodes()
+	if _loading_overlay != null and _loading_overlay.has_method("hide_loading"):
+		_loading_overlay.hide_loading()
+
+
+func set_loading_message(text: String) -> void:
+	_ensure_ux_nodes()
+	if _loading_overlay != null and _loading_overlay.has_method("set_message"):
+		_loading_overlay.set_message(text)
+
+
+func show_interaction_prompt(text: String) -> void:
+	_ensure_ux_nodes()
+	if _interaction_prompt != null and _interaction_prompt.has_method("show_text"):
+		_interaction_prompt.show_text(text)
+
+
+func hide_interaction_prompt() -> void:
+	_ensure_ux_nodes()
+	if _interaction_prompt != null and _interaction_prompt.has_method("hide_prompt"):
+		_interaction_prompt.hide_prompt()
+
+
+func show_control_hints() -> void:
+	_ensure_ux_nodes()
+	if _control_hint_panel != null and _control_hint_panel.has_method("show_panel"):
+		_control_hint_panel.show_panel()
+
+
+func hide_control_hints() -> void:
+	_ensure_ux_nodes()
+	if _control_hint_panel != null and _control_hint_panel.has_method("hide_panel"):
+		_control_hint_panel.hide_panel()
+
+
+func toggle_control_hints() -> void:
+	_ensure_ux_nodes()
+	if _control_hint_panel != null and _control_hint_panel.has_method("toggle_panel"):
+		_control_hint_panel.toggle_panel()
 
 
 func show_breakthrough_result(result: Dictionary) -> void:
@@ -320,6 +397,27 @@ func _update_log_display() -> void:
 func _set_action_result(text: String) -> void:
 	if _action_result:
 		_action_result.text = text
+
+
+func _ensure_ux_nodes() -> void:
+	if _loading_overlay == null:
+		_loading_overlay = get_node_or_null("LoadingOverlay")
+		if _loading_overlay == null:
+			_loading_overlay = LoadingOverlayScene.instantiate()
+			_loading_overlay.name = "LoadingOverlay"
+			add_child(_loading_overlay)
+	if _interaction_prompt == null:
+		_interaction_prompt = get_node_or_null("InteractionPrompt")
+		if _interaction_prompt == null:
+			_interaction_prompt = InteractionPromptScene.instantiate()
+			_interaction_prompt.name = "InteractionPrompt"
+			add_child(_interaction_prompt)
+	if _control_hint_panel == null:
+		_control_hint_panel = get_node_or_null("ControlHintPanel")
+		if _control_hint_panel == null:
+			_control_hint_panel = ControlHintPanelScene.instantiate()
+			_control_hint_panel.name = "ControlHintPanel"
+			add_child(_control_hint_panel)
 
 
 func _inventory_text() -> String:

@@ -1,5 +1,90 @@
 # PixelWorld 测试报告
 
+## Latest Test Conclusion - v0.4.3
+
+- **Current version**: v0.4.3
+- **Test date**: 2026-06-28
+- **Godot version**: 4.7.stable.official.5b4e0cb0f
+- **CLI Build**: PASS (`--headless --path . --quit`)
+- **CLI SmokeTest**: PASS (`312/312 PASS`, 312 defined tests across `T001-T330`)
+- **JSON configuration parse**: PASS with UTF-8 read
+- **Editor GUI**: LAUNCHED/UNVERIFIED. Process id `377436` stayed alive after the short launch check, then was closed by Codex. No visual confirmation was performed.
+- **Runtime GUI**: LAUNCHED/UNVERIFIED. Process id `391588` stayed alive after the short launch check, then was closed by Codex. No visual confirmation of player feel, prompt placement, or stutter was performed.
+- **Manual F5 M051-M080**: UNTESTED. No human visual confirmation has been performed in this report.
+- **Conclusion**: PASS for CLI scope. v0.4.3 map transition performance, ColorRect node reduction, collision node reduction, async loading overlay, interaction prompts, control hints, scene readability, service/quest text, docs, and T271-T330 coverage are complete for automated scope.
+- **Non-failing runtime output**: `.env` missing warning keeps Mock mode; T114 intentionally requests a missing texture; T198/T222 intentionally request missing transition/map paths; Godot headless may print RID/ObjectDB/resource cleanup warnings after SceneTree smoke tests. The final SmokeTest process exited with code 0.
+
+## v0.4.3 Verification Focus
+
+* `ChunkedMapRenderer` reduces one-ColorRect-per-tile pressure by merging same-type tile runs.
+* `OptimizedCollisionBuilder` reduces blocking tile collision nodes by merging horizontal runs.
+* `MapRuntimeCache` keeps generated `MapInstance` data available for repeat visits.
+* `GameWorld.switch_map_async()` uses frame breaks, input locking, loading overlay hooks, and post-switch unlock.
+* `InteractionPrompt`, `ControlHintPanel`, and `InteractionTargetTracker` improve player guidance.
+* `SceneDecorator` deepens map readability while keeping existing map content.
+* `UX_PERFORMANCE_REPORT.md` records lag root causes and known lag positions.
+* `GAMEPLAY_UX_GUIDE.md` records controls, prompts, service text, quest text, and manual F5 expectations.
+
+## v0.4.3 CLI Smoke Test Summary
+
+| Range | Result | Notes |
+|---|---:|---|
+| T001-T062 | 62/62 PASS | Original CLI/gameplay regressions |
+| T063-T080 | N/A | These numbers are intentionally not defined in SmokeTestRunner |
+| T081-T115 | 35/35 PASS | v0.3.0 progression and asset regressions |
+| T116-T155 | 40/40 PASS | v0.4.0 multi-map architecture regressions |
+| T156-T210 | 55/55 PASS | v0.4.1 building interior/runtime transition tests |
+| T211-T270 | 60/60 PASS | v0.4.2 health, state isolation, services, quests, HUD, docs |
+| T271-T330 | 60/60 PASS | v0.4.3 UX, performance, prompts, scene readability, docs |
+| Actual total | 312/312 PASS | SmokeTestRunner executed 312 defined tests |
+
+## v0.4.3 GUI And Manual Checks
+
+| Area | Status | Notes |
+|---|---|---|
+| CLI Build | PASS | `Godot_v4.7-stable_win64_console.exe --headless --path . --quit` |
+| CLI SmokeTest | PASS | `Godot_v4.7-stable_win64_console.exe --headless --path . --script res://scripts/tests/SmokeTestRunner.gd`; `312/312 PASS` |
+| Editor GUI | LAUNCHED/UNVERIFIED | Process id `377436` stayed alive after 8 seconds, then was closed by Codex. Requires visual confirmation outside Codex. |
+| Runtime GUI | LAUNCHED/UNVERIFIED | Process id `391588` stayed alive after 8 seconds, then was closed by Codex. Requires visual confirmation outside Codex. |
+| Manual F5 M051-M080 | UNTESTED | Requires human visual confirmation in the Godot editor. |
+
+## v0.4.3 Manual F5 Checklist
+
+These checks require opening Godot, pressing F5, and visually confirming runtime behavior. They are not passed by CLI tests alone.
+
+| ID | Item | Status | Notes |
+|---|---|---|---|
+| M051 | Editor opens the project without import/runtime error dialogs | UNTESTED | Requires human visual confirmation |
+| M052 | F5 starts the main menu scene | UNTESTED | Requires human visual confirmation |
+| M053 | New world creation reaches GameWorld without a long frozen screen | UNTESTED | Requires human visual confirmation |
+| M054 | First village load has acceptable visible load time | UNTESTED | Known lag position |
+| M055 | Player appears once and input is unlocked after load | UNTESTED | Requires human visual confirmation |
+| M056 | Movement acceleration and stopping feel responsive | UNTESTED | Feel cannot be CLI-verified |
+| M057 | Diagonal movement does not feel faster than cardinal movement | UNTESTED | Feel cannot be CLI-verified |
+| M058 | Attack input does not stutter or spam unexpectedly | UNTESTED | Requires human visual confirmation |
+| M059 | Interaction prompt appears near doors/resources/chests/NPCs | UNTESTED | Requires human visual confirmation |
+| M060 | Interaction prompt disappears cleanly when walking away | UNTESTED | Requires human visual confirmation |
+| M061 | Control hint panel text is readable and not overlapping HUD | UNTESTED | Requires human visual confirmation |
+| M062 | LoadingOverlay appears during map travel | UNTESTED | Requires human visual confirmation |
+| M063 | LoadingOverlay hides after map travel | UNTESTED | Requires human visual confirmation |
+| M064 | Village to forest transition has acceptable stutter | UNTESTED | Known lag position |
+| M065 | Forest to village return keeps player control and HUD state | UNTESTED | Requires human visual confirmation |
+| M066 | Interior entry via building door works from player interaction | UNTESTED | Requires human visual confirmation |
+| M067 | Interior exit returns player near the correct village door | UNTESTED | Requires human visual confirmation |
+| M068 | Building names and `[E]` door labels are readable | UNTESTED | Requires human visual confirmation |
+| M069 | Exit/travel labels are readable and not misleading | UNTESTED | Requires human visual confirmation |
+| M070 | Resource and chest prompts use clear action verbs | UNTESTED | Requires human visual confirmation |
+| M071 | NPC talk prompt does not conflict with nearby doors/resources | UNTESTED | Requires human visual confirmation |
+| M072 | Healer/inn/shop/blacksmith service text communicates cost/effect | UNTESTED | Requires human visual confirmation |
+| M073 | Quest panel text communicates objective/reward/status | UNTESTED | Requires human visual confirmation |
+| M074 | Debug performance summary can be shown without crashing | UNTESTED | Requires human visual confirmation |
+| M075 | Repeated village/forest switching does not duplicate player nodes | UNTESTED | Requires human visual confirmation |
+| M076 | Repeated interior/village switching does not corrupt map state | UNTESTED | Requires human visual confirmation |
+| M077 | Save/load preserves current map, spawn, quest, and map state | UNTESTED | Requires human visual confirmation |
+| M078 | Dense forest areas remain readable and reasonably smooth | UNTESTED | Known lag position |
+| M079 | Cave entrance/exit areas remain readable and reasonably smooth | UNTESTED | Known lag position |
+| M080 | No obvious UI overlap at the default desktop resolution | UNTESTED | Requires human visual confirmation |
+
 ## Latest Test Conclusion - v0.4.2
 
 - **Current version**: v0.4.2

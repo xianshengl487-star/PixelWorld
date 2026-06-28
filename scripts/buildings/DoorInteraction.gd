@@ -28,6 +28,11 @@ func setup(data: Dictionary, tile_size: int = 32) -> void:
 
 func activate() -> bool:
 	var gw = get_tree().get_first_node_in_group("game_world") if get_tree() != null else null
+	if gw != null and gw.get("is_switching_map") == true:
+		return false
+	if gw != null and gw.has_method("switch_map_async") and target_map_id != "":
+		gw.switch_map_async(target_map_id, target_spawn_id)
+		return true
 	if gw != null and gw.has_method("switch_map") and target_map_id != "":
 		return gw.switch_map(target_map_id, target_spawn_id)
 	if Engine.get_main_loop() is SceneTree:
@@ -41,3 +46,7 @@ func _on_body_entered(body: Node2D) -> void:
 	if body == null or not body.is_in_group("player"):
 		return
 	activate()
+
+
+func get_interaction_prompt() -> String:
+	return "[E] Enter: %s" % (building_id if building_id != "" else target_map_id)

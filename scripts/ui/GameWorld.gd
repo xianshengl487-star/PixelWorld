@@ -8,6 +8,9 @@ const MapGeneratorClass = preload("res://scripts/map/MapGenerator.gd")
 const MapValidatorClass = preload("res://scripts/map/MapValidator.gd")
 const MapRepairerClass = preload("res://scripts/map/MapRepairer.gd")
 const MapCollisionBuilderClass = preload("res://scripts/map/MapCollisionBuilder.gd")
+const ChunkedMapRendererClass = preload("res://scripts/map/ChunkedMapRenderer.gd")
+const OptimizedCollisionBuilderClass = preload("res://scripts/map/OptimizedCollisionBuilder.gd")
+const MapRuntimeCacheClass = preload("res://scripts/map/MapRuntimeCache.gd")
 const MapInstanceGeneratorClass = preload("res://scripts/map/MapInstanceGenerator.gd")
 const MapStateClass = preload("res://scripts/map/MapState.gd")
 const MapTransitionClass = preload("res://scripts/map/MapTransition.gd")
@@ -15,6 +18,8 @@ const TransitionAreaClass = preload("res://scripts/map/TransitionArea.gd")
 const WorldGraphClass = preload("res://scripts/world/WorldGraph.gd")
 const ScopedIdClass = preload("res://scripts/core/ScopedId.gd")
 const QuestSystemClass = preload("res://scripts/quests/QuestSystem.gd")
+const SceneDecoratorClass = preload("res://scripts/map/SceneDecorator.gd")
+const InteractionTargetTrackerClass = preload("res://scripts/interactions/InteractionTargetTracker.gd")
 const EnemyScene = preload("res://scenes/Enemy.tscn")
 const InteractableClass = preload("res://scripts/interactions/Interactable.gd")
 const ExplorationSystemClass = preload("res://scripts/world/ExplorationSystem.gd")
@@ -34,11 +39,34 @@ var _dialogue_box = null
 var _is_initialized: bool = false
 var _collision_count: int = 0
 var _exploration_system = null
+var _map_cache = null
+var _interaction_tracker = null
+
+var is_switching_map: bool = false
+var transition_cooldown: float = 0.6
+var interact_cooldown: float = 0.25
+var last_transition_time: float = -1.0
+var last_interact_time: float = -1.0
+
+var last_map_load_ms: float = 0.0
+var last_switch_map_ms: float = 0.0
+var last_render_ms: float = 0.0
+var last_collision_ms: float = 0.0
+var last_spawn_ms: float = 0.0
+var last_unload_ms: float = 0.0
+var last_map_node_count: int = 0
+var last_tile_count: int = 0
+var last_merged_rect_count: int = 0
+var last_collision_tile_count: int = 0
+var last_decoration_count: int = 0
+var last_cache_hit: bool = false
 
 
 func _ready() -> void:
 	add_to_group("game_world")
 	_exploration_system = ExplorationSystemClass.new()
+	_map_cache = MapRuntimeCacheClass.new()
+	_interaction_tracker = InteractionTargetTrackerClass.new()
 	setup_from_world_state()
 
 
@@ -46,6 +74,10 @@ func _process(_delta: float) -> void:
 	var player = get_player_node()
 	if _is_initialized and _exploration_system != null and player != null:
 		_exploration_system.update_player_tile(WorldState.player_position)
+	if _is_initialized and _interaction_tracker != null and player != null:
+		if _hud != null:
+			_interaction_tracker.bind_hud(_hud)
+		_interaction_tracker.update_prompt(player.global_position)
 
 
 func setup_from_world_state() -> bool:
@@ -90,6 +122,7 @@ func setup_world_graph_from_blueprint(blueprint: Dictionary) -> bool:
 
 
 func load_map(map_id: String, spawn_id: String = "default", skip_save_current: bool = false, force_reload: bool = false) -> bool:
+	var load_start = _measure_start()
 	ensure_runtime_layers()
 	if current_world_graph == null:
 		if not setup_world_graph_from_blueprint(WorldState.world_blueprint):
@@ -99,16 +132,23 @@ func load_map(map_id: String, spawn_id: String = "default", skip_save_current: b
 		return false
 	if map_id == current_map_id and current_map_instance != null and not force_reload:
 		place_player_at_spawn(spawn_id)
+		last_map_load_ms = _measure_end(load_start)
 		return true
 	unload_current_map(skip_save_current)
 	current_map_id = map_id
 	WorldState.set_current_map_id(map_id, spawn_id)
 	current_world_graph.set_current_map(map_id)
 	var raw_map = current_world_graph.get_map(map_id)
-	var generator = MapInstanceGeneratorClass.new()
-	var map_data = raw_map.to_save_data() if raw_map != null and raw_map.has_method("to_save_data") else raw_map
-	map_data["world_type"] = WorldState.world_type
-	current_map_instance = generator.generate_map_instance(map_data, {"world_type": WorldState.world_type, "seed": current_world_graph.seed})
+	last_cache_hit = _map_cache != null and _map_cache.has_map(map_id)
+	if last_cache_hit:
+		current_map_instance = _map_cache.get_map(map_id)
+	else:
+		var generator = MapInstanceGeneratorClass.new()
+		var map_data = raw_map.to_save_data() if raw_map != null and raw_map.has_method("to_save_data") else raw_map
+		map_data["world_type"] = WorldState.world_type
+		current_map_instance = generator.generate_map_instance(map_data, {"world_type": WorldState.world_type, "seed": current_world_graph.seed})
+		if _map_cache != null:
+			_map_cache.set_map(map_id, current_map_instance)
 	current_world_graph.maps[map_id] = current_map_instance
 	_attach_graph_transitions(current_map_instance)
 	_map_data = {
@@ -122,21 +162,29 @@ func load_map(map_id: String, spawn_id: String = "default", skip_save_current: b
 	WorldState.current_region = current_map_instance.display_name
 	_render_map()
 	_build_collisions()
+	var spawn_start = _measure_start()
 	_spawn_buildings()
+	_decorate_scene()
 	create_transition_areas_for_map(current_map_instance)
 	place_player_at_spawn(spawn_id)
 	_spawn_npcs()
 	_spawn_enemies()
 	_spawn_interactables()
+	_register_interaction_targets()
+	last_spawn_ms = _measure_end(spawn_start)
 	restore_map_state(map_id)
 	_update_quest_visit_map(map_id)
 	_setup_ui()
 	_log_map_arrival()
 	_is_initialized = get_player_node() != null
+	last_map_load_ms = _measure_end(load_start)
 	return _is_initialized
 
 
 func unload_current_map(skip_save_current: bool = false) -> void:
+	var unload_start = _measure_start()
+	if _interaction_tracker != null:
+		_interaction_tracker.clear()
 	if not skip_save_current:
 		save_current_map_state()
 	for layer_name in ["GroundLayer", "DecorationLayer", "BuildingLayer", "InteractionLayer", "TransitionLayer", "CollisionLayer", "NPCLayer", "EnemyLayer", "InteractableLayer", "TileMap"]:
@@ -152,6 +200,7 @@ func unload_current_map(skip_save_current: bool = false) -> void:
 				continue
 			child.queue_free()
 	_collision_count = 0
+	last_unload_ms = _measure_end(unload_start)
 
 
 func save_current_map_state() -> void:
@@ -189,6 +238,9 @@ func restore_map_state(map_id: String) -> void:
 
 
 func switch_map(target_map_id: String, target_spawn_id: String = "default") -> bool:
+	var switch_start = _measure_start()
+	if is_switching_map:
+		return false
 	if current_world_graph == null or not current_world_graph.has_map(target_map_id):
 		last_transition_message = "target map not found: %s" % target_map_id
 		_log_error("GameWorld", last_transition_message)
@@ -196,6 +248,7 @@ func switch_map(target_map_id: String, target_spawn_id: String = "default") -> b
 	var from_display = get_loaded_map_display_name()
 	save_current_map_state()
 	var previous_map_id = current_map_id
+	_set_player_input_enabled(false, "switch_map")
 	var ok = load_map(target_map_id, target_spawn_id, true)
 	if ok:
 		var to_display = get_loaded_map_display_name()
@@ -206,12 +259,20 @@ func switch_map(target_map_id: String, target_spawn_id: String = "default") -> b
 		last_transition_message = "Arrived at %s" % to_display
 		if _hud != null and _hud.has_method("show_transition_message"):
 			_hud.show_transition_message(last_transition_message)
+		if _hud != null and _hud.has_method("show_toast"):
+			_hud.show_toast("Arrived at: %s" % to_display)
 	else:
 		current_map_id = previous_map_id
+	_set_player_input_enabled(true)
+	last_switch_map_ms = _measure_end(switch_start)
 	return ok
 
 
 func request_map_transition(transition_id: String) -> bool:
+	if is_switching_map:
+		return false
+	if not _transition_cooldown_ready():
+		return false
 	var transition_data = _find_transition(transition_id)
 	if transition_data.is_empty():
 		last_transition_message = "transition not found: %s" % transition_id
@@ -226,7 +287,79 @@ func request_map_transition(transition_id: String) -> bool:
 		if _hud != null and _hud.has_method("show_transition_message"):
 			_hud.show_transition_message(last_transition_message)
 		return false
+	last_transition_time = _now_seconds()
 	return switch_map(transition.to_map_id, transition.target_spawn_id)
+
+
+func switch_map_async(target_map_id: String, target_spawn_id: String = "default") -> bool:
+	if is_switching_map:
+		return false
+	if current_world_graph == null or not current_world_graph.has_map(target_map_id):
+		last_transition_message = "target map not found: %s" % target_map_id
+		_log_error("GameWorld", last_transition_message)
+		return false
+	if not _transition_cooldown_ready():
+		return false
+	is_switching_map = true
+	last_transition_time = _now_seconds()
+	var switch_start = _measure_start()
+	var from_display = get_loaded_map_display_name()
+	var previous_map_id = current_map_id
+	_set_player_input_enabled(false, "switch_map_async")
+	var target_name = _map_display_name(target_map_id)
+	if _hud != null and _hud.has_method("show_loading"):
+		_hud.show_loading(target_name)
+	await get_tree().process_frame
+	save_current_map_state()
+	await get_tree().process_frame
+	var ok = load_map(target_map_id, target_spawn_id, true)
+	await get_tree().process_frame
+	if ok:
+		var to_display = get_loaded_map_display_name()
+		if _is_interior_map(target_map_id):
+			try_log("Entered building: %s" % to_display)
+		elif from_display != "" and _is_interior_display(from_display):
+			try_log("Left building and returned to %s." % to_display)
+		last_transition_message = "Arrived at %s" % to_display
+		if _hud != null and _hud.has_method("show_transition_message"):
+			_hud.show_transition_message(last_transition_message)
+		if _hud != null and _hud.has_method("show_toast"):
+			_hud.show_toast("Arrived at: %s" % to_display)
+	else:
+		current_map_id = previous_map_id
+	if _hud != null and _hud.has_method("hide_loading"):
+		_hud.hide_loading()
+	_set_player_input_enabled(true)
+	is_switching_map = false
+	last_switch_map_ms = _measure_end(switch_start)
+	return ok
+
+
+func load_map_async(map_id: String, spawn_id: String = "default") -> bool:
+	await get_tree().process_frame
+	return load_map(map_id, spawn_id, false, true)
+
+
+func request_map_transition_async(transition_id: String) -> bool:
+	if is_switching_map:
+		return false
+	if not _transition_cooldown_ready():
+		return false
+	var transition_data = _find_transition(transition_id)
+	if transition_data.is_empty():
+		last_transition_message = "transition not found: %s" % transition_id
+		_log_error("GameWorld", last_transition_message)
+		return false
+	var transition = MapTransitionClass.new()
+	transition.setup(transition_data)
+	var result = transition.can_use(WorldState)
+	if not result.get("ok", false):
+		last_transition_message = str(result.get("reason", transition.get_locked_reason(WorldState)))
+		try_log(last_transition_message)
+		if _hud != null and _hud.has_method("show_transition_message"):
+			_hud.show_transition_message(last_transition_message)
+		return false
+	return await switch_map_async(transition.to_map_id, transition.target_spawn_id)
 
 
 func place_player_at_spawn(spawn_id: String) -> bool:
@@ -308,6 +441,9 @@ func create_transition_areas_for_map(map_instance) -> void:
 		marker.position = -marker.size / 2.0
 		marker.color = Color(0.25, 0.75, 1.0, 0.35)
 		area.add_child(marker)
+		var label = _make_runtime_label("Travel: %s" % str(transition.get("to_map_id", transition.get("target_map_id", ""))), Vector2(-58, -34))
+		label.name = "TargetLabel"
+		area.add_child(label)
 
 
 func debug_print_node_tree() -> void:
@@ -418,12 +554,36 @@ func debug_summary() -> Dictionary:
 		"interactable_count": get_interactable_count(),
 		"active_quest_count": _active_quest_count(),
 		"last_transition_message": last_transition_message,
+		"performance": get_performance_summary(),
 		"current_save_slot": "save_001"
 	}
 
 
 func print_debug_summary() -> void:
 	print(JSON.stringify(debug_summary(), "\t"))
+
+
+func get_performance_summary() -> Dictionary:
+	return {
+		"last_map_load_ms": last_map_load_ms,
+		"last_switch_map_ms": last_switch_map_ms,
+		"last_render_ms": last_render_ms,
+		"last_collision_ms": last_collision_ms,
+		"last_spawn_ms": last_spawn_ms,
+		"last_unload_ms": last_unload_ms,
+		"last_map_node_count": last_map_node_count,
+		"tile_count": last_tile_count,
+		"merged_rect_count": last_merged_rect_count,
+		"collision_count": _collision_count,
+		"collision_tile_count": last_collision_tile_count,
+		"decoration_count": last_decoration_count,
+		"cache_count": _map_cache.get_cache_count() if _map_cache != null else 0,
+		"cache_hit": last_cache_hit
+	}
+
+
+func print_performance_summary() -> void:
+	print(JSON.stringify(get_performance_summary(), "\t"))
 
 
 func print_current_map_state() -> void:
@@ -463,6 +623,7 @@ func _generate_legacy_map() -> void:
 
 
 func _render_map() -> void:
+	var render_start = _measure_start()
 	ensure_runtime_layers()
 	var ground_layer = get_node_or_null("GroundLayer")
 	var tile_map = get_node_or_null("TileMap")
@@ -471,7 +632,21 @@ func _render_map() -> void:
 			continue
 		for child in layer.get_children():
 			child.queue_free()
+	var renderer = ChunkedMapRendererClass.new()
+	var result = renderer.render(_map_data, TILE_SIZE, ground_layer, {"clear_existing": false})
+	if result.get("ok", false):
+		last_map_node_count = int(result.get("node_count", 0))
+		last_tile_count = int(result.get("tile_count", 0))
+		last_merged_rect_count = int(result.get("merged_rect_count", 0))
+		last_render_ms = _measure_end(render_start)
+		return
+	_render_map_per_tile(ground_layer)
+	last_render_ms = _measure_end(render_start)
+
+
+func _render_map_per_tile(ground_layer: Node) -> void:
 	var tiles = _map_data.get("tiles", [])
+	var count := 0
 	for y in range(tiles.size()):
 		for x in range(tiles[y].size()):
 			var rect = ColorRect.new()
@@ -479,9 +654,14 @@ func _render_map() -> void:
 			rect.position = Vector2(x * TILE_SIZE, y * TILE_SIZE)
 			rect.color = _get_tile_color(int(tiles[y][x]))
 			ground_layer.add_child(rect)
+			count += 1
+	last_map_node_count = count
+	last_tile_count = count
+	last_merged_rect_count = count
 
 
 func _build_collisions() -> void:
+	var collision_start = _measure_start()
 	var collision_layer = get_node_or_null("CollisionLayer")
 	if collision_layer == null:
 		collision_layer = Node2D.new()
@@ -489,8 +669,27 @@ func _build_collisions() -> void:
 		add_child(collision_layer)
 	for child in collision_layer.get_children():
 		child.queue_free()
-	var builder = MapCollisionBuilderClass.new()
-	_collision_count = builder.build_collisions(_map_data, TILE_SIZE, collision_layer)
+	var optimized = OptimizedCollisionBuilderClass.new()
+	last_collision_tile_count = optimized.count_blocking_tiles(_map_data)
+	_collision_count = optimized.build_collisions(_map_data, TILE_SIZE, collision_layer)
+	if _collision_count <= 0 and last_collision_tile_count > 0:
+		var builder = MapCollisionBuilderClass.new()
+		_collision_count = builder.build_collisions(_map_data, TILE_SIZE, collision_layer)
+	last_collision_ms = _measure_end(collision_start)
+
+
+func _decorate_scene() -> void:
+	var layer = get_node_or_null("DecorationLayer")
+	if layer == null:
+		return
+	for child in layer.get_children():
+		child.queue_free()
+	if current_map_instance == null:
+		last_decoration_count = 0
+		return
+	var decorator = SceneDecoratorClass.new()
+	var result = decorator.decorate(current_map_instance, {"DecorationLayer": layer}, TILE_SIZE)
+	last_decoration_count = int(result.get("decorations", 0))
 
 
 func _spawn_player(spawn_id: String = "default") -> void:
@@ -599,6 +798,9 @@ func _spawn_buildings() -> void:
 		rect.size = Vector2(size.x * TILE_SIZE, size.y * TILE_SIZE)
 		rect.color = _building_color(str(building.get("building_type", "")))
 		layer.add_child(rect)
+		var label = _make_runtime_label(str(building.get("display_name", building.get("building_type", rect.name))), Vector2(-8, -24))
+		label.name = "NameLabel"
+		rect.add_child(label)
 		var door_pos = _vec(building.get("door_position", {"x": pos.x, "y": pos.y}))
 		var door = ColorRect.new()
 		door.name = "%s_Door" % rect.name
@@ -606,6 +808,9 @@ func _spawn_buildings() -> void:
 		door.size = Vector2(TILE_SIZE, TILE_SIZE)
 		door.color = Color(0.95, 0.78, 0.25, 0.95)
 		layer.add_child(door)
+		var door_label = _make_runtime_label("[E]", Vector2(-44, -22))
+		door_label.name = "InteractLabel"
+		door.add_child(door_label)
 		if not WorldState.building_states.has(str(building.get("building_id", ""))):
 			WorldState.building_states[str(building.get("building_id", ""))] = {"visited": false, "open": true}
 
@@ -623,6 +828,29 @@ func _setup_ui() -> void:
 	if _hud != null and _hud.has_method("show_debug_info"):
 		_hud.show_debug_info(debug_summary())
 	_dialogue_box = get_node_or_null("DialogueBox")
+	if _interaction_tracker != null:
+		_interaction_tracker.bind_hud(_hud)
+
+
+func _register_interaction_targets() -> void:
+	if _interaction_tracker == null:
+		return
+	_interaction_tracker.clear()
+	for layer_name in ["TransitionLayer", "InteractableLayer", "NPCLayer"]:
+		var layer = get_node_or_null(layer_name)
+		if layer == null:
+			continue
+		for child in layer.get_children():
+			_interaction_tracker.register_target(child)
+
+
+func trigger_best_interaction_target(player_pos: Vector2, player = null) -> Dictionary:
+	if _interaction_tracker == null:
+		return {"ok": false, "error": "missing_tracker"}
+	if not _interact_cooldown_ready():
+		return {"ok": false, "error": "interact_cooldown"}
+	last_interact_time = _now_seconds()
+	return _interaction_tracker.trigger_best_target(player_pos, player)
 
 
 func _attach_graph_transitions(map_instance) -> void:
@@ -686,6 +914,54 @@ func _log_error(context: String, message: String) -> void:
 		var log = tree.root.get_node_or_null("GameLog")
 		if log != null and log.has_method("add_error"):
 			log.add_error(message)
+
+
+func _measure_start() -> int:
+	return Time.get_ticks_usec()
+
+
+func _measure_end(start_ticks: int) -> float:
+	return float(Time.get_ticks_usec() - start_ticks) / 1000.0
+
+
+func _now_seconds() -> float:
+	return float(Time.get_ticks_msec()) / 1000.0
+
+
+func _transition_cooldown_ready() -> bool:
+	return last_transition_time < 0.0 or _now_seconds() - last_transition_time >= transition_cooldown
+
+
+func _interact_cooldown_ready() -> bool:
+	return last_interact_time < 0.0 or _now_seconds() - last_interact_time >= interact_cooldown
+
+
+func _set_player_input_enabled(enabled: bool, reason: String = "") -> void:
+	var player = get_player_node()
+	if player == null:
+		return
+	if enabled and player.has_method("clear_control_locked"):
+		player.clear_control_locked()
+	elif not enabled and player.has_method("set_control_locked"):
+		player.set_control_locked(reason)
+	elif player.has_method("set_input_enabled"):
+		player.set_input_enabled(enabled)
+
+
+func _map_display_name(map_id: String) -> String:
+	if current_world_graph == null:
+		return map_id
+	var map = current_world_graph.get_map(map_id)
+	if map is Dictionary:
+		return str(map.get("display_name", map_id))
+	if map != null and map.has_method("to_save_data"):
+		var data = map.to_save_data()
+		return str(data.get("display_name", map_id))
+	if map != null:
+		var display = map.get("display_name")
+		if display != null and str(display) != "":
+			return str(display)
+	return map_id
 
 
 func _update_quest_visit_map(map_id: String) -> void:
@@ -819,6 +1095,18 @@ func _building_color(building_type: String) -> Color:
 		"general_store": return Color(0.55, 0.46, 0.70, 0.95)
 		"sect_gate", "task_hall", "training_hall": return Color(0.65, 0.62, 0.52, 0.95)
 		_: return Color(0.58, 0.36, 0.18, 0.95)
+
+
+func _make_runtime_label(text: String, offset: Vector2) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.position = offset
+	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_color_override("font_color", Color(1.0, 0.95, 0.72, 1.0))
+	label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.75))
+	label.add_theme_constant_override("shadow_offset_x", 1)
+	label.add_theme_constant_override("shadow_offset_y", 1)
+	return label
 
 
 func _vec(value) -> Vector2i:

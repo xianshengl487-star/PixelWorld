@@ -218,3 +218,7 @@ func _get_tile_position() -> Vector2:
 ## 获取 NPC 数据（供 Player 使用）
 func get_npc_data() -> Dictionary:
 	return npc_data
+
+
+func get_interaction_prompt() -> String:
+	return "[E] Talk: %s" % str(npc_data.get("name", "NPC"))

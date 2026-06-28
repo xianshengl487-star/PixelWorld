@@ -14,6 +14,15 @@ const AssetResolverClass = preload("res://scripts/assets/AssetResolver.gd")
 
 var stats = null
 var can_attack: bool = true
+var input_enabled: bool = true
+var acceleration: float = 1200.0
+var friction: float = 1600.0
+var current_velocity: Vector2 = Vector2.ZERO
+var interact_buffer_time: float = 0.15
+var attack_buffer_time: float = 0.15
+var last_interact_pressed_at: float = -1.0
+var last_attack_pressed_at: float = -1.0
+var _control_lock_reason: String = ""
 
 # 地图碰撞引用（由 GameWorld 设置）
 var _map_walkable: Array = []
@@ -51,33 +60,51 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if stats and stats.is_dead:
 		velocity = Vector2.ZERO
+		current_velocity = Vector2.ZERO
 		return
 	if stats:
 		stats.restore_stamina(1 if delta > 0 else 0)
+	if not input_enabled:
+		current_velocity = current_velocity.move_toward(Vector2.ZERO, friction * delta)
+		velocity = current_velocity
+		move_and_slide()
+		_update_world_position()
+		return
 	var input_dir = Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	if input_dir.length() > 1.0:
+		input_dir = input_dir.normalized()
 	var current_speed = stats.move_speed if stats else move_speed
-	velocity = input_dir * current_speed
+	var target_velocity = input_dir * current_speed
+	var accel = acceleration if input_dir.length() > 0.01 else friction
+	current_velocity = current_velocity.move_toward(target_velocity, accel * delta)
+	velocity = current_velocity
 	move_and_slide()
-	
-	# 更新 WorldState 中的玩家位置
-	var tile_x = int(position.x / _tile_size)
-	var tile_y = int(position.y / _tile_size)
-	WorldState.player_position = Vector2(tile_x, tile_y)
+	_update_world_position()
 
 
 func _process(_delta: float) -> void:
+	if not input_enabled:
+		return
 	# 检测附近的可交互 NPC
-	if Input.is_action_just_pressed("interact"):
+	if Input.is_action_just_pressed("interact") and _cooldown_ready(last_interact_pressed_at, interact_buffer_time):
+		last_interact_pressed_at = _now_seconds()
 		_try_interact()
-	if Input.is_action_just_pressed("attack"):
+	if Input.is_action_just_pressed("attack") and _cooldown_ready(last_attack_pressed_at, attack_buffer_time):
 		attack()
 
 
 ## 尝试与最近的 NPC 交互
-func _try_interact() -> void:
+func _try_interact() -> Dictionary:
+	if not input_enabled:
+		return {"ok": false, "error": "input_disabled", "reason": _control_lock_reason}
+	var gw = get_tree().get_first_node_in_group("game_world") if get_tree() != null else null
+	if gw != null and gw.has_method("trigger_best_interaction_target"):
+		var tracked = gw.trigger_best_interaction_target(global_position, self)
+		if tracked.get("ok", false):
+			return tracked
 	var result = _interaction_system.interact(self)
 	if result.get("ok", false):
-		return
+		return result
 	
 	var player_tile = _get_tile_position()
 	
@@ -98,6 +125,8 @@ func _try_interact() -> void:
 	
 	if closest and closest.has_method("interact"):
 		closest.interact(_ai_client)
+		return {"ok": true, "target": closest.name}
+	return {"ok": false, "error": "no_target"}
 
 
 ## 初始化（由 GameWorld 调用）
@@ -110,6 +139,28 @@ func setup(map_walkable: Array, ai_client, tile_size: int = 32) -> void:
 	_ensure_stats()
 
 
+func set_input_enabled(enabled: bool) -> void:
+	input_enabled = enabled
+	if enabled:
+		_control_lock_reason = ""
+	else:
+		current_velocity = Vector2.ZERO
+		velocity = Vector2.ZERO
+
+
+func is_input_enabled() -> bool:
+	return input_enabled
+
+
+func set_control_locked(reason: String = "") -> void:
+	_control_lock_reason = reason
+	set_input_enabled(false)
+
+
+func clear_control_locked() -> void:
+	set_input_enabled(true)
+
+
 ## 获取当前瓦片坐标
 func _get_tile_position() -> Vector2:
 	return Vector2(
@@ -118,10 +169,29 @@ func _get_tile_position() -> Vector2:
 	)
 
 
+func _update_world_position() -> void:
+	var tile_x = int(position.x / _tile_size)
+	var tile_y = int(position.y / _tile_size)
+	WorldState.player_position = Vector2(tile_x, tile_y)
+
+
+func _now_seconds() -> float:
+	return float(Time.get_ticks_msec()) / 1000.0
+
+
+func _cooldown_ready(last_time: float, cooldown: float) -> bool:
+	return last_time < 0.0 or _now_seconds() - last_time >= cooldown
+
+
 func attack() -> Dictionary:
 	_ensure_stats()
+	if not input_enabled:
+		return {"ok": false, "error": "input_disabled", "message": "input_disabled", "reason": _control_lock_reason}
 	if stats.is_dead or not can_attack:
 		return {"ok": false, "message": ""}
+	if not _cooldown_ready(last_attack_pressed_at, attack_buffer_time):
+		return {"ok": false, "message": "attack_buffer"}
+	last_attack_pressed_at = _now_seconds()
 	if not stats.use_stamina(1):
 		GameLog.add_entry("你太疲惫了，暂时无法攻击。")
 		return {"ok": false, "message": "no_stamina"}

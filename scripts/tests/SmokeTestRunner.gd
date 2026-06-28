@@ -1,5 +1,5 @@
 extends SceneTree
-## SmokeTestRunner.gd — CLI 自动化冒烟测试  v0.4.2
+## SmokeTestRunner.gd — CLI 自动化冒烟测试  v0.4.3
 ## 运行: godot --headless --path . --script res://scripts/tests/SmokeTestRunner.gd
 
 const AIClientClass = preload("res://scripts/ai/AIClient.gd")
@@ -35,6 +35,17 @@ const DoorInteractionClass = preload("res://scripts/buildings/DoorInteraction.gd
 const TransitionAreaClass = preload("res://scripts/map/TransitionArea.gd")
 const ScopedIdClass = preload("res://scripts/core/ScopedId.gd")
 const QuestSystemClass = preload("res://scripts/quests/QuestSystem.gd")
+const ChunkedMapRendererClass = preload("res://scripts/map/ChunkedMapRenderer.gd")
+const OptimizedCollisionBuilderClass = preload("res://scripts/map/OptimizedCollisionBuilder.gd")
+const MapRuntimeCacheClass = preload("res://scripts/map/MapRuntimeCache.gd")
+const LoadingOverlayClass = preload("res://scripts/ui/LoadingOverlay.gd")
+const InteractionPromptClass = preload("res://scripts/ui/InteractionPrompt.gd")
+const ControlHintPanelClass = preload("res://scripts/ui/ControlHintPanel.gd")
+const FloatingLabelClass = preload("res://scripts/ui/FloatingLabel.gd")
+const SceneDecoratorClass = preload("res://scripts/map/SceneDecorator.gd")
+const InteractionTargetTrackerClass = preload("res://scripts/interactions/InteractionTargetTracker.gd")
+const ServiceMenuClass = preload("res://scripts/ui/ServiceMenu.gd")
+const QuestPanelClass = preload("res://scripts/ui/QuestPanel.gd")
 const TEST_SEED: int = 42
 
 var _results: Array = []
@@ -50,7 +61,7 @@ var _save_manager = null
 
 func _init() -> void:
 	print("=".repeat(60))
-	print("  PixelWorld CLI Smoke Test Runner  v0.4.2  (seed=%d)" % TEST_SEED)
+	print("  PixelWorld CLI Smoke Test Runner  v0.4.3  (seed=%d)" % TEST_SEED)
 	print("=".repeat(60))
 	
 	await process_frame; await process_frame
@@ -175,6 +186,14 @@ func _run_all_tests() -> void:
 	_t250(); _t251(); _t252(); _t253(); _t254(); _t255(); _t256(); _t257()
 	_t258(); _t259(); await _t260(); await _t261(); await _t262(); await _t263()
 	_t264(); _t265(); _t266(); _t267(); _t268(); _t269(); _t270()
+	_t271(); _t272(); _t273(); _t274(); _t275(); _t276(); _t277(); _t278()
+	_t279(); _t280(); _t281(); _t282(); _t283(); _t284(); _t285(); _t286()
+	_t287(); _t288(); _t289(); _t290(); _t291(); _t292(); _t293(); _t294()
+	await _t295(); await _t296(); await _t297(); await _t298(); await _t299(); await _t300()
+	await _t301(); await _t302(); await _t303(); await _t304(); await _t305(); await _t306()
+	await _t307(); await _t308(); await _t309(); await _t310(); await _t311(); await _t312()
+	_t313(); _t314(); _t315(); _t316(); _t317(); _t318(); _t319(); _t320()
+	_t321(); _t322(); _t323(); _t324(); _t325(); _t326(); _t327(); _t328(); _t329(); _t330()
 
 func _t001(): _record("T001", "project.godot 存在", FileAccess.file_exists("res://project.godot"))
 func _t002(): _record("T002", "MainMenu.tscn 可加载", _scene_loadable("res://scenes/MainMenu.tscn"))
@@ -2008,7 +2027,7 @@ func _t251() -> void:
 
 func _t252() -> void:
 	var data = _save_manager._collect_save_data() if _save_manager != null else {}
-	_record("T252", "SaveManager supports save_version 0.4.2", data.get("save_version", "") == "0.4.2")
+	_record("T252", "SaveManager supports save_version 0.4.3", data.get("save_version", "") == "0.4.3")
 
 
 func _t253() -> void:
@@ -2133,6 +2152,512 @@ func _t269() -> void:
 
 func _t270() -> void:
 	_record("T270", "GAMEPLAY_QUESTS.md exists", FileAccess.file_exists("res://GAMEPLAY_QUESTS.md"))
+
+
+func _t271() -> void:
+	_record("T271", "ChunkedMapRenderer can be created", ChunkedMapRendererClass.new() != null)
+
+
+func _t272() -> void:
+	var parent := Node2D.new()
+	var result = ChunkedMapRendererClass.new().render({"tiles": [[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]]}, 32, parent)
+	var ok = result.get("ok", false) and int(result.get("node_count", 0)) == 4 and int(result.get("tile_count", 0)) == 16
+	parent.free()
+	_record("T272", "ChunkedMapRenderer merges uniform rows", ok, "nodes=%d" % int(result.get("node_count", 0)))
+
+
+func _t273() -> void:
+	var parent := Node2D.new()
+	var result = ChunkedMapRendererClass.new().render({"tiles": [[1, 1, 2, 2, 2, 1], [3, 3, 3, 3, 0, 0]]}, 16, parent)
+	var ok = result.get("ok", false) and int(result.get("node_count", 0)) < int(result.get("tile_count", 0))
+	parent.free()
+	_record("T273", "ChunkedMapRenderer reduces ColorRect count", ok, "nodes=%d tiles=%d" % [int(result.get("node_count", 0)), int(result.get("tile_count", 0))])
+
+
+func _t274() -> void:
+	var parent := Node2D.new()
+	parent.add_child(ColorRect.new())
+	var result = ChunkedMapRendererClass.new().render({"tiles": [[1, 1, 1]]}, 16, parent)
+	var ok = result.get("ok", false) and int(result.get("node_count", 0)) == 1
+	parent.free()
+	_record("T274", "ChunkedMapRenderer clears previous children", ok)
+
+
+func _t275() -> void:
+	var result = ChunkedMapRendererClass.new().render({"tiles": [[1]]}, 16, null)
+	_record("T275", "ChunkedMapRenderer handles missing parent", not result.get("ok", true) and result.get("error", "") == "missing_parent")
+
+
+func _t276() -> void:
+	_record("T276", "OptimizedCollisionBuilder can be created", OptimizedCollisionBuilderClass.new() != null)
+
+
+func _t277() -> void:
+	var count = OptimizedCollisionBuilderClass.new().count_blocking_tiles({"tiles": [[0, 2, 2, 1], [3, 4, 5, 0]]})
+	_record("T277", "OptimizedCollisionBuilder counts blocking tiles", count == 5, "count=%d" % count)
+
+
+func _t278() -> void:
+	var parent := Node2D.new()
+	var builder = OptimizedCollisionBuilderClass.new()
+	var collision_count = builder.build_collisions({"tiles": [[2, 2, 2, 0, 3, 3], [1, 1, 4, 4, 4, 4]]}, 32, parent)
+	var ok = collision_count == 3 and parent.get_child_count() == 3
+	parent.free()
+	_record("T278", "OptimizedCollisionBuilder row-merges collision runs", ok, "collisions=%d" % collision_count)
+
+
+func _t279() -> void:
+	var count = OptimizedCollisionBuilderClass.new().build_collisions({"tiles": []}, 32, Node2D.new())
+	_record("T279", "OptimizedCollisionBuilder handles empty maps", count == 0)
+
+
+func _t280() -> void:
+	var cache = MapRuntimeCacheClass.new()
+	var map = MapInstanceClass.new()
+	map.setup({"map_id": "cache_a"})
+	cache.set_map("cache_a", map)
+	_record("T280", "MapRuntimeCache stores and retrieves maps", cache.has_map("cache_a") and cache.get_map("cache_a") == map)
+
+
+func _t281() -> void:
+	var cache = MapRuntimeCacheClass.new()
+	cache.max_entries = 2
+	for id in ["a", "b", "c"]:
+		var map = MapInstanceClass.new()
+		map.setup({"map_id": id})
+		cache.set_map(id, map)
+	_record("T281", "MapRuntimeCache evicts oldest entries", cache.get_cache_count() == 2 and not cache.has_map("a") and cache.has_map("c"))
+
+
+func _t282() -> void:
+	_record("T282", "LoadingOverlay scene is loadable", _scene_loadable("res://scenes/ui/LoadingOverlay.tscn"))
+
+
+func _t283() -> void:
+	var overlay = LoadingOverlayClass.new()
+	overlay.show_loading("Forest")
+	var label = overlay.get_node_or_null("MessageLabel")
+	var ok = overlay.is_loading_visible() and label != null and "Forest" in label.text
+	overlay.hide_loading()
+	overlay.free()
+	_record("T283", "LoadingOverlay shows target map text", ok)
+
+
+func _t284() -> void:
+	var overlay = LoadingOverlayClass.new()
+	overlay.show_loading("Cave")
+	var label = overlay.get_node_or_null("TipLabel")
+	var ok = label != null and "F6" in label.text and "E interact" in label.text
+	overlay.free()
+	_record("T284", "LoadingOverlay shows control tip text", ok)
+
+
+func _t285() -> void:
+	_record("T285", "InteractionPrompt scene is loadable", _scene_loadable("res://scenes/ui/InteractionPrompt.tscn"))
+
+
+func _t286() -> void:
+	var prompt = InteractionPromptClass.new()
+	prompt.show_text("[E] Read: Sign")
+	var ok = prompt.is_prompt_visible() and prompt.get_prompt_text() == "[E] Read: Sign"
+	prompt.hide_prompt()
+	ok = ok and not prompt.is_prompt_visible()
+	prompt.free()
+	_record("T286", "InteractionPrompt show/hide works", ok)
+
+
+func _t287() -> void:
+	var prompt = InteractionPromptClass.new()
+	prompt.show_prompt("Open", "Chest", "E")
+	var ok = prompt.get_prompt_text() == "[E] Open: Chest"
+	prompt.free()
+	_record("T287", "InteractionPrompt formats action target key", ok)
+
+
+func _t288() -> void:
+	_record("T288", "ControlHintPanel scene is loadable", _scene_loadable("res://scenes/ui/ControlHintPanel.tscn"))
+
+
+func _t289() -> void:
+	var panel = ControlHintPanelClass.new()
+	var text = panel.get_hint_text()
+	panel.free()
+	_record("T289", "ControlHintPanel documents core controls", "WASD" in text and "E Interact" in text and "F3" in text and "H Help" in text)
+
+
+func _t290() -> void:
+	var panel = ControlHintPanelClass.new()
+	panel.show_panel()
+	panel.toggle_panel()
+	var hidden = not panel.visible
+	panel.toggle_panel()
+	var shown = panel.visible
+	panel.free()
+	_record("T290", "ControlHintPanel toggles visibility", hidden and shown)
+
+
+func _t291() -> void:
+	var label = FloatingLabelClass.new()
+	label.setup("Travel: forest", Vector2(3, 4))
+	var ok = label.text == "Travel: forest" and label.position == Vector2(3, 4)
+	label.free()
+	_record("T291", "FloatingLabel applies text and offset", ok)
+
+
+func _t292() -> void:
+	var map = _generated_village()
+	var layer := Node2D.new()
+	var result = SceneDecoratorClass.new().decorate(map, {"DecorationLayer": layer}, 32)
+	var ok = result.get("ok", false) and int(result.get("decorations", 0)) >= 30
+	layer.free()
+	_record("T292", "SceneDecorator adds village readability markers", ok, "decorations=%d" % int(result.get("decorations", 0)))
+
+
+func _t293() -> void:
+	var map = MapInstanceClass.new()
+	var tiles: Array = []
+	var walkable: Array = []
+	for y in range(8):
+		var tile_row: Array = []
+		var walk_row: Array = []
+		for x in range(8):
+			tile_row.append(1)
+			walk_row.append(true)
+		tiles.append(tile_row)
+		walkable.append(walk_row)
+	map.setup({
+		"map_id": "decor_reserved",
+		"map_type": "village",
+		"size": [8, 8],
+		"tiles": tiles,
+		"walkable": walkable,
+		"transitions": [{"from_rect": {"x": 2, "y": 2, "w": 1, "h": 1}}],
+		"buildings": [{"door_position": {"x": 3, "y": 3}}]
+	})
+	var layer := Node2D.new()
+	var decorator = SceneDecoratorClass.new()
+	decorator.decorate(map, {"DecorationLayer": layer}, 32)
+	var ok = true
+	for pos in decorator.last_positions:
+		if pos == Vector2i(2, 2) or pos == Vector2i(3, 3):
+			ok = false
+	layer.free()
+	_record("T293", "SceneDecorator avoids transition and door tiles", ok)
+
+
+func _t294() -> void:
+	_record("T294", "InteractionTargetTracker can be created", InteractionTargetTrackerClass.new() != null)
+
+
+func _t295() -> void:
+	var tracker = InteractionTargetTrackerClass.new()
+	var near := Node2D.new()
+	var far := Node2D.new()
+	near.position = Vector2(8, 0)
+	far.position = Vector2(80, 0)
+	tracker.register_target(far)
+	tracker.register_target(near)
+	var ok = tracker.get_best_target(Vector2.ZERO) == near
+	near.free()
+	far.free()
+	_record("T295", "InteractionTargetTracker selects nearest target", ok)
+
+
+func _t296() -> void:
+	var target = InteractableClass.new()
+	target.setup({"id": "herb_001", "display_name": "Herb Patch", "interaction_type": "resource", "map_id": "village_001"})
+	var tracker = InteractionTargetTrackerClass.new()
+	var text = tracker._prompt_for_target(target)
+	target.free()
+	_record("T296", "InteractionTargetTracker reads target prompt text", text == "[E] Collect: Herb Patch")
+
+
+func _t297() -> void:
+	var target = InteractableClass.new()
+	target.setup({"id": "sign_001", "display_name": "Village Sign", "interaction_type": "sign", "map_id": "village_001"})
+	target.position = Vector2(4, 0)
+	var tracker = InteractionTargetTrackerClass.new()
+	tracker.register_target(target)
+	var result = tracker.trigger_best_target(Vector2.ZERO, null)
+	target.free()
+	_record("T297", "InteractionTargetTracker triggers interactable target", result.get("ok", false), result.get("message", ""))
+
+
+func _t298() -> void:
+	var menu = ServiceMenuClass.new()
+	menu.show_service("Apothecary", "Healer", {"coin": 5}, {"health": 30}, true)
+	var text = menu.get_service_text()
+	menu.free()
+	_record("T298", "ServiceMenu summarizes cost and effect", "Cost: Coin x5" in text and "Effect: Health +30" in text)
+
+
+func _t299() -> void:
+	var panel = QuestPanelClass.new()
+	panel.show_quest({
+		"title": "Collect Herbs",
+		"status": "active",
+		"objectives": [{"target_id": "herb", "progress": 1, "required": 3}],
+		"rewards": {"coin": 10, "items": {"potion": 1}}
+	})
+	var text = panel.get_quest_text()
+	panel.free()
+	_record("T299", "QuestPanel summarizes objective and reward", "Objective: herb 1/3" in text and "Coin x10" in text and "Potion x1" in text)
+
+
+func _t300() -> void:
+	var scene = load("res://scenes/Player.tscn")
+	var player = scene.instantiate() if scene != null else null
+	var ok = player != null and player.has_method("set_input_enabled") and player.has_method("is_input_enabled")
+	if player != null:
+		player.queue_free()
+	_record("T300", "Player exposes input enable API", ok)
+
+
+func _t301() -> void:
+	var scene = load("res://scenes/Player.tscn")
+	var player = scene.instantiate() if scene != null else null
+	var result = {}
+	if player != null:
+		player.set_control_locked("smoke")
+		result = player.attack()
+	var ok = result.get("error", "") == "input_disabled"
+	if player != null:
+		player.queue_free()
+	_record("T301", "Player attack respects input lock", ok)
+
+
+func _t302() -> void:
+	var hud_scene = load("res://scenes/ui/GameHUD.tscn")
+	var hud = hud_scene.instantiate() if hud_scene != null else null
+	var ok = hud != null and hud.has_method("show_loading") and hud.has_method("show_interaction_prompt") and hud.has_method("toggle_control_hints")
+	if hud != null:
+		hud.queue_free()
+	_record("T302", "GameHUD exposes v0.4.3 UX methods", ok)
+
+
+func _t303() -> void:
+	var hud_scene = load("res://scenes/ui/GameHUD.tscn")
+	var hud = hud_scene.instantiate() if hud_scene != null else null
+	if hud != null:
+		root.add_child(hud)
+		await _wait_frame()
+	var ok = hud != null and hud.get_node_or_null("LoadingOverlay") != null and hud.get_node_or_null("InteractionPrompt") != null and hud.get_node_or_null("ControlHintPanel") != null
+	if hud != null:
+		hud.queue_free()
+		await _wait_frame()
+	_record("T303", "GameHUD creates UX helper nodes", ok)
+
+
+func _t304() -> void:
+	var hud_scene = load("res://scenes/ui/GameHUD.tscn")
+	var hud = hud_scene.instantiate() if hud_scene != null else null
+	if hud != null:
+		root.add_child(hud)
+		await _wait_frame()
+		hud.show_loading("Cave")
+	var overlay = hud.get_node_or_null("LoadingOverlay") if hud != null else null
+	var ok = overlay != null and overlay.visible
+	if hud != null:
+		hud.hide_loading()
+		ok = ok and not overlay.visible
+		hud.queue_free()
+		await _wait_frame()
+	_record("T304", "GameHUD loading overlay can show and hide", ok)
+
+
+func _t305() -> void:
+	var hud_scene = load("res://scenes/ui/GameHUD.tscn")
+	var hud = hud_scene.instantiate() if hud_scene != null else null
+	if hud != null:
+		root.add_child(hud)
+		await _wait_frame()
+		hud.show_interaction_prompt("[E] Open: Chest")
+	var prompt = hud.get_node_or_null("InteractionPrompt") if hud != null else null
+	var ok = prompt != null and prompt.visible and prompt.get_prompt_text() == "[E] Open: Chest"
+	if hud != null:
+		hud.queue_free()
+		await _wait_frame()
+	_record("T305", "GameHUD interaction prompt can show text", ok)
+
+
+func _t306() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var perf = gw.get_performance_summary() if gw != null else {}
+	var ok = perf.has("last_map_load_ms") and float(perf.get("last_map_load_ms", 0.0)) >= 0.0 and int(perf.get("tile_count", 0)) > 0
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T306", "GameWorld records map-load performance summary", ok)
+
+
+func _t307() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var perf = gw.get_performance_summary() if gw != null else {}
+	var ok = int(perf.get("last_map_node_count", 0)) > 0 and int(perf.get("last_map_node_count", 0)) < int(perf.get("tile_count", 0))
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T307", "GameWorld uses merged map visual nodes", ok, "nodes=%d tiles=%d" % [int(perf.get("last_map_node_count", 0)), int(perf.get("tile_count", 0))])
+
+
+func _t308() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var perf = gw.get_performance_summary() if gw != null else {}
+	var collision_count = int(perf.get("collision_count", 0))
+	var blocking_tiles = int(perf.get("collision_tile_count", 0))
+	var ok = collision_count > 0 and blocking_tiles > 0 and collision_count <= blocking_tiles
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T308", "GameWorld uses merged collision runs", ok, "collisions=%d blocking=%d" % [collision_count, blocking_tiles])
+
+
+func _t309() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var summary = gw.debug_summary() if gw != null else {}
+	var ok = summary.has("performance") and summary.get("performance", {}).has("last_render_ms")
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T309", "GameWorld debug_summary includes performance data", ok)
+
+
+func _t310() -> void:
+	var gw = await _make_loaded_game_world("forest_001")
+	var layer = gw.get_node_or_null("DecorationLayer") if gw != null else null
+	var perf = gw.get_performance_summary() if gw != null else {}
+	var ok = layer != null and layer.get_child_count() >= 60 and int(perf.get("decoration_count", 0)) >= 60
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T310", "GameWorld decorates forest map readability", ok)
+
+
+func _t311() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = gw != null and gw.has_method("switch_map_async") and gw.has_method("request_map_transition_async")
+	if gw != null:
+		gw.queue_free()
+		await _wait_frame()
+	_record("T311", "GameWorld exposes async map transition API", ok)
+
+
+func _t312() -> void:
+	var gw = await _make_loaded_game_world("village_001")
+	var ok = false
+	if gw != null:
+		ok = await gw.switch_map_async("forest_001", "from_village")
+		ok = ok and gw.get_current_map_id() == "forest_001" and gw.get("is_switching_map") == false
+		gw.queue_free()
+		await _wait_frame()
+	_record("T312", "GameWorld switch_map_async completes and unlocks", ok)
+
+
+func _t313() -> void:
+	var area = TransitionAreaClass.new()
+	area.setup({"transition_id": "to_forest", "target_map_id": "forest_001"}, 32)
+	var ok = area.get_interaction_prompt() == "[E] Travel: forest_001"
+	area.free()
+	_record("T313", "TransitionArea exposes travel prompt", ok)
+
+
+func _t314() -> void:
+	var door = DoorInteractionClass.new()
+	door.setup({"building_id": "apothecary_001", "target_map_id": "apothecary_001_interior"}, 32)
+	var ok = door.get_interaction_prompt() == "[E] Enter: apothecary_001"
+	door.free()
+	_record("T314", "DoorInteraction exposes enter prompt", ok)
+
+
+func _t315() -> void:
+	var target = InteractableClass.new()
+	target.setup({"id": "chest_001", "display_name": "Old Chest", "interaction_type": "chest", "map_id": "village_001"})
+	var ok = target.get_interaction_prompt() == "[E] Open: Old Chest"
+	target.free()
+	_record("T315", "Interactable exposes typed prompt", ok)
+
+
+func _t316() -> void:
+	var text = _read_text("res://README.md")
+	_record("T316", "README documents v0.4.3 UX milestone", "v0.4.3" in text and "UX" in text and "T271-T330" in text)
+
+
+func _t317() -> void:
+	_record("T317", "UX_PERFORMANCE_REPORT.md exists", FileAccess.file_exists("res://UX_PERFORMANCE_REPORT.md"))
+
+
+func _t318() -> void:
+	_record("T318", "GAMEPLAY_UX_GUIDE.md exists", FileAccess.file_exists("res://GAMEPLAY_UX_GUIDE.md"))
+
+
+func _t319() -> void:
+	var text = _read_text("res://TEST_REPORT.md")
+	_record("T319", "TEST_REPORT contains M051-M080 manual checklist", "M051" in text and "M080" in text)
+
+
+func _t320() -> void:
+	var text = _read_text("res://DEV_LOG.md")
+	_record("T320", "DEV_LOG updated to v0.4.3", "v0.4.3" in text and "map transition performance" in text)
+
+
+func _t321() -> void:
+	var text = _read_text("res://project.godot")
+	_record("T321", "project.godot version is 0.4.3", "config/version=\"0.4.3\"" in text)
+
+
+func _t322() -> void:
+	var data = _save_manager._collect_save_data() if _save_manager != null else {}
+	_record("T322", "SaveManager writes save_version 0.4.3", data.get("save_version", "") == "0.4.3")
+
+
+func _t323() -> void:
+	var ok = InputMap.has_action("quest_panel") and InputMap.has_action("inventory") and InputMap.has_action("debug_toggle")
+	_record("T323", "InputMap has quest inventory debug actions", ok)
+
+
+func _t324() -> void:
+	var ok = InputMap.has_action("save_game") and InputMap.has_action("load_game") and InputMap.has_action("help_toggle")
+	_record("T324", "InputMap has save load help actions", ok)
+
+
+func _t325() -> void:
+	var hud_scene = load("res://scenes/ui/GameHUD.tscn")
+	var hud = hud_scene.instantiate() if hud_scene != null else null
+	var ok = hud != null and hud.has_method("toggle_control_hints")
+	if hud != null:
+		hud.queue_free()
+	_record("T325", "GameHUD can toggle control hints", ok)
+
+
+func _t326() -> void:
+	var gw = load("res://scenes/GameWorld.tscn").instantiate()
+	var perf = gw.get_performance_summary()
+	var ok = perf.has("cache_hit") and perf.has("cache_count") and perf.has("last_switch_map_ms")
+	gw.queue_free()
+	_record("T326", "Performance summary includes cache and switch metrics", ok)
+
+
+func _t327() -> void:
+	_record("T327", "ServiceMenu and QuestPanel scenes are loadable", _scene_loadable("res://scenes/ui/ServiceMenu.tscn") and _scene_loadable("res://scenes/ui/QuestPanel.tscn"))
+
+
+func _t328() -> void:
+	var map = MapInstanceGeneratorClass.new().generate_map_instance({"map_id": "forest_001", "map_type": "forest", "display_name": "Forest"}, {"seed": TEST_SEED, "world_type": "xianxia"})
+	var layer := Node2D.new()
+	var result = SceneDecoratorClass.new().decorate(map, {"DecorationLayer": layer}, 32)
+	var ok = result.get("ok", false) and int(result.get("decorations", 0)) >= 60
+	layer.free()
+	_record("T328", "SceneDecorator expands forest detail budget", ok, "decorations=%d" % int(result.get("decorations", 0)))
+
+
+func _t329() -> void:
+	var text = _read_text("res://UX_PERFORMANCE_REPORT.md")
+	_record("T329", "UX performance report records lag root causes", "ColorRect" in text and "collision" in text and "switch_map_async" in text)
+
+
+func _t330() -> void:
+	var text = _read_text("res://GAMEPLAY_UX_GUIDE.md")
+	_record("T330", "Gameplay UX guide documents prompts and controls", "InteractionPrompt" in text and "ControlHintPanel" in text and "E interact" in text)
 
 
 func _fresh_quest_system():

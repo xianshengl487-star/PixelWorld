@@ -81,6 +81,22 @@ func on_interact(player) -> Dictionary:
 	return {"ok": true, "message": message, "id": id, "scoped_id": scoped_id, "type": interaction_type}
 
 
+func get_interaction_prompt() -> String:
+	var action = "Interact"
+	match interaction_type:
+		"resource":
+			action = "Collect"
+		"chest":
+			action = "Open"
+		"door":
+			action = "Enter"
+		"cave":
+			action = "Travel"
+		"sign":
+			action = "Read"
+	return "[E] %s: %s" % [action, display_name]
+
+
 func _add_item(gained_id: String, amount: int) -> void:
 	var world_state = _world_state()
 	if world_state == null:

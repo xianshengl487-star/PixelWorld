@@ -1,10 +1,10 @@
 # PixelWorld
 
-PixelWorld is a Godot 4.7 top-down pixel RPG prototype. The current version is **v0.4.2**, focused on code health, map-state isolation, building services, old-save migration, and a first deterministic quest system on top of the Pokemon/Stardew-style multi-map architecture introduced in v0.4.0.
+PixelWorld is a Godot 4.7 top-down pixel RPG prototype. The current version is **v0.4.3**, focused on map transition performance, operation feel, interaction prompts, control hints, scene readability, and UX documentation on top of the v0.4.2 state/quest foundation.
 
 ## Current Version
 
-- Version: `v0.4.2`
+- Version: `v0.4.3`
 - Engine: Godot `4.7.stable`
 - AI mode: Mock/local only
 - Real MiMo / NVIDIA API integration: paused
@@ -30,10 +30,28 @@ PixelWorld is a Godot 4.7 top-down pixel RPG prototype. The current version is *
 - Building interiors are generated as separate `interior` maps with default/exit spawns, service POIs, NPC placeholders, and return transitions
 - Runtime `GameWorld` loading/unloading maps through `load_map()` and `switch_map()`
 - JSON save/load through `SaveManager`, now including map id, visited maps, map states, world graph data, per-map player positions, last spawn id, and building states
-- Save data now includes `save_version`, quest state, equipment state, training-use state, and v0.4.2 migration defaults for old saves.
+- Save data now includes `save_version`, quest state, equipment state, training-use state, and migration defaults for old saves.
+- `ChunkedMapRenderer` and `OptimizedCollisionBuilder` reduce map-load node pressure while keeping the ColorRect MVP fallback.
+- `LoadingOverlay`, `InteractionPrompt`, `ControlHintPanel`, `InteractionTargetTracker`, `ServiceMenu`, and `QuestPanel` provide the first pass of player-facing UX guidance.
 - Player movement, HP, stamina, attack, damage, death, respawn, NPCs, enemies, interactions, inventory, HUD, and progression summary
 - Program-generated placeholder pixel assets
 - v0.3.0 world progression templates retained for xianxia, magic, apocalypse, cyberpunk, wuxia, urban ability, strange tale, and star sci worlds
+
+## v0.4.3 UX, Performance, And Readability
+
+v0.4.3 improves the feel and readability of the existing multi-map world without changing the project into a seamless world or a full TileMapLayer pipeline.
+
+- `ChunkedMapRenderer` row-merges same-type tile runs to avoid one `ColorRect` per tile.
+- `OptimizedCollisionBuilder` row-merges blocking tiles into larger collision shapes.
+- `MapRuntimeCache` caches generated `MapInstance` data for repeat visits.
+- `GameWorld.switch_map_async()` adds frame breaks, a transition cooldown for player-triggered routes, input locking, loading overlay display, and post-switch unlock.
+- `GameWorld.get_performance_summary()` exposes render, collision, load, switch, spawn, unload, node, tile, decoration, and cache metrics.
+- `InteractionPrompt` and `InteractionTargetTracker` give doors, exits, NPCs, resources, chests, signs, and cave entries consistent prompt text.
+- `ControlHintPanel` documents movement, interact, attack, quest, inventory, debug, save, load, and help controls.
+- `SceneDecorator` adds deterministic map-type detail markers to village, forest, cave, and sect gate maps.
+- `ServiceMenu` and `QuestPanel` provide text-first summaries for service cost/effect and quest objective/reward state.
+
+See `UX_PERFORMANCE_REPORT.md` and `GAMEPLAY_UX_GUIDE.md` for the new UX and performance notes.
 
 ## v0.4.2 State Isolation, Services, And Quests
 
@@ -128,6 +146,7 @@ python tools\generate_pixel_assets.py
 - v0.4.0: establish multi-map world graph, map switching, per-map state, and building templates.
 - v0.4.1: add building interiors, village door transitions, map-state strengthening, T025 cleanup, and T156-T210 regression coverage.
 - v0.4.2: add code health report, scoped ids, safer map switching, save migration, building-service gameplay, quest data, HUD debug hooks, and T211-T270 coverage.
+- v0.4.3: add map transition performance optimization, UX prompts, control hints, scene readability markers, performance reports, and T271-T330 coverage.
 - v0.4.x: add more authored map types, richer interior maps, and more transition unlock rules.
 - v0.5.x: connect progression rewards to real combat/exploration loops and tune breakthrough costs.
 - v0.6.x: replace more ColorRect placeholders with generated tile/item sprites.
@@ -137,18 +156,19 @@ python tools\generate_pixel_assets.py
 
 ## Test Status
 
-Latest recorded result for v0.4.2:
+Latest recorded result for v0.4.3:
 
 - JSON parse validation: PASS
 - CLI compile validation: PASS
-- SmokeTestRunner: `252/252 PASS`
+- SmokeTestRunner: `312/312 PASS`
 - New v0.4.0 tests `T116-T155`: `40/40 PASS`
 - New v0.4.1 tests `T156-T210`: `55/55 PASS`
 - New v0.4.2 tests `T211-T270`: `60/60 PASS`
+- New v0.4.3 tests `T271-T330`: `60/60 PASS`
 - `T025` result in this run: PASS
 - `T028` result in this run: PASS
 
-Godot editor/runtime GUI launch was attempted after CLI validation, but Codex cannot visually confirm the editor/runtime window. Manual F5 checks `M031-M050` remain untested in `TEST_REPORT.md`.
+Godot editor/runtime GUI process launch was attempted after CLI validation. Editor process `377436` and runtime process `391588` stayed alive for the short launch checks and were then closed by Codex. Visual confirmation was not performed, so manual F5 checks `M051-M080` remain untested until a human validates feel, stutter, readability, and visual flow in Godot.
 
 Run smoke tests:
 

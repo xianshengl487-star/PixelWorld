@@ -30,5 +30,20 @@ func _on_body_entered(body: Node2D) -> void:
 	if not body.has_method("_try_interact"):
 		return
 	var gw = get_tree().get_first_node_in_group("game_world")
-	if gw != null and gw.has_method("request_map_transition"):
+	if gw != null and gw.get("is_switching_map") == true:
+		return
+	if gw != null and gw.has_method("request_map_transition_async"):
+		gw.request_map_transition_async(transition_id)
+	elif gw != null and gw.has_method("request_map_transition"):
 		gw.request_map_transition(transition_id)
+
+
+func activate() -> bool:
+	var gw = get_tree().get_first_node_in_group("game_world") if get_tree() != null else null
+	if gw != null and gw.has_method("request_map_transition"):
+		return gw.request_map_transition(transition_id)
+	return false
+
+
+func get_interaction_prompt() -> String:
+	return "[E] Travel: %s" % target_map_id

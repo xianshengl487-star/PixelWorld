@@ -3,7 +3,7 @@ extends Node
 
 const MapStateSerializerClass = preload("res://scripts/map/MapStateSerializer.gd")
 const SAVE_DIR := "user://saves"
-const SAVE_VERSION := "0.4.2"
+const SAVE_VERSION := "0.4.3"
 
 
 func save_game(slot_id: String = "save_001") -> bool:
